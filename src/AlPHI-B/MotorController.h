@@ -3,20 +3,8 @@
 
 #define MAX_PIDS 6
 
-//ESC signal type defenitions
-#define PWM 1 //1000 to 2000 μs pulse length
-#define ONESHOT125 2 //125 to 250 μs pulse length
-
-//Set ESC signal type
-#define ESC_TYPE ONESHOT125
-
-
 //Import libraries
-#if ESC_TYPE == PWM
-  #include <Servo.h>
-#elif ESC_TYPE == ONESHOT125
-  #include <Teensy_PWM.h>
-#endif
+#include <Teensy_PWM.h>
 
 //Import files
 #include "Logger.h"
@@ -25,7 +13,7 @@
 class InputHandler;
 
 extern const int lightPin;
-extern int xyzr[4];
+extern float xyzr[4];
 extern float potPercent;
 
 
@@ -64,7 +52,6 @@ class MotorController {
     void addPID(const char* name, float target,  float* current, float* currentDiff=NULL);
     /** Retrieves the controls settings from settings.json. Call after all PIDs are added */
     void setupInputs();
-    ////void logSettings();
 
     /** Adds a percentage of power to a certain motor
      *  
@@ -98,17 +85,14 @@ class MotorController {
     int motorCount = 0;
     ///Stores the pin numbers of the motors
     int* motors;
-    #if ESC_TYPE == PWM
-      ///Holds the PWM signal being sent to each motor
-      Servo* motorSignal;
-    #elif ESC_TYPE == ONESHOT125
-      ///Holds the OneShot125 signal being sent to each motor
-      Teensy_PWM** motorSignal;
-      //Frequency of the signal being sent
-      float signalFreq = 3500.0f;
-      //Maximum duty cycle allowed to be sent, depends on signalFreq
-      float maxDutyCycle = signalFreq/40.0f;
-    #endif
+    ///Holds the OneShot125 signal being sent to each motor
+    Teensy_PWM** motorSignal;
+    ///Frequency (Hz) of the signal being sent
+    float signalFreq;
+    ///Minimum duty cycle of the signal
+    float minDutyCycle;
+    ///Maximum duty cycle of the signal
+    float maxDutyCycle;
 
     ///The default percentage of each of the motors
     float* defaultValues;
@@ -150,7 +134,7 @@ class InputHandler {
 
   private:
     ///The current value of the input
-    float input;
+    float* input;
     ///Value of the output when the input is at its minimum
     float minControl;
     ///Value of the output when the input is at its mid point
@@ -166,5 +150,12 @@ class InputHandler {
     const char* PIDTargetStr;
     ///Reference to the PID controller to control
     PIDcontroller* PIDTarget;
+};
+
+class HardwareController {
+  public:
+    void setRGB(int r, int g, int b);
+  private:
+    int RGB_LED;
 };
 #endif

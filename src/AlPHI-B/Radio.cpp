@@ -1,6 +1,7 @@
-#include "DroneRadio.h"
+#include "Radio.h"
 
-void DroneRadio::init() {
+void Radio::init() {
+  SPI1.begin();
   radio.begin(&SPI1);
   radio.setRadiation(RF24_PA_MAX, RF24_2MBPS);
   radio.setChannel(124);
@@ -10,16 +11,16 @@ void DroneRadio::init() {
   radio.openWritingPipe(addresses[1]);
   radio.openReadingPipe(1, addresses[0]);
   
-  //Ready drone
+  //Ready radio
   data[0] = 0b01010101;
-  for (int i=0; i<10; i++){
+  for (int i=0; i<10; i++) {
     radio.write(&data, 1);
     delay(5);
   }
   radio.startListening();
 }
 
-void DroneRadio::getInput() {
+void Radio::getInput() {
   if (radio.available()) {
     //Lower the counter for loss of connection after receiving radio
     radioReceived = true;
@@ -35,9 +36,9 @@ void DroneRadio::getInput() {
     
     //Get analog info from packet
     for (int i=0; i<4; i++) {
-      xyzr[i] = data[i] - 127;
-      if (abs(xyzr[i]) < 5) { //Joystick deadzone
-       xyzr[i] = 0;
+      xyzr[i] = data[i]/255.0;
+      if (abs(xyzr[i] - 0.5) < 0.04) { //Joystick deadzone
+       xyzr[i] = 0.5;
       }
     }
     xyzr[1] = -xyzr[1]; //Correct pitch
@@ -49,7 +50,7 @@ void DroneRadio::getInput() {
   }
 }
 
-void DroneRadio::checkSignal(unsigned long loopTime, unsigned long currentTime) {
+void Radio::checkSignal(unsigned long loopTime, unsigned long currentTime) {
   //On the first loop set lastRadioTime to the current time to avoid a large spike
   if (lastRadioTime == 0) {
     lastRadioTime = currentTime;

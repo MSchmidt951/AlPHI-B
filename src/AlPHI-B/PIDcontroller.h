@@ -7,8 +7,6 @@
 
 class MotorController;
 
-extern int xyzr[4];
-
 /** 
  * @class PIDcontroller
  * @brief Runs the PID calculations and stores the settings for it

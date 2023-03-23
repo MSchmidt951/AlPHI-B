@@ -150,14 +150,10 @@ class Logger {
       #if STORAGE_TYPE == SD_CARD
         if (!sdSettings[parent][name].isNull()) {
           if (len == 1) {
-            if (sdSettings[parent][name] != "default") {
-              var[0] = sdSettings[parent][name];
-            }
+            var[0] = sdSettings[parent][name];
           } else {
             for (int i=0; i<len; i++) {
-              if (sdSettings[parent][name][i] != "default") {
-                var[i] = sdSettings[parent][name][i];
-              }
+              var[i] = sdSettings[parent][name][i];
             }
           }
           return true;
@@ -179,14 +175,10 @@ class Logger {
       #if STORAGE_TYPE == SD_CARD
         if (!sdSettings[parent][type][name][subSetting].isNull()) {
           if (len == 1) {
-            if (sdSettings[parent][type][name][subSetting] != "default") {
-              var[0] = sdSettings[parent][type][name][subSetting];
-            }
+            var[0] = sdSettings[parent][type][name][subSetting];
           } else {
             for (int i=0; i<len; i++) {
-              if (sdSettings[parent][type][name][subSetting][i] != "default") {
-                var[i] = sdSettings[parent][type][name][subSetting][i];
-              }
+              var[i] = sdSettings[parent][type][name][subSetting][i];
             }
           }
           return true;

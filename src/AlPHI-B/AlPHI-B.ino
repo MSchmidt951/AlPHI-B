@@ -1,18 +1,17 @@
-#include "DroneRadio.h"
 #include "IMU.h"
 #include "Logger.h"
 #include "MotorController.h"
 #include "PIDcontroller.h"
+#include "Radio.h"
 
-/*** * * * DRONE SETTINGS * * * ***/
+/*** * * * SETTINGS * * * ***/
 const int loopRate = 2000; //Maxiumum loop rate (Hz)
 const int maxLoopTime = 1000000/loopRate; //Maximum loop time (us)
 
 //IMU and sensor settings can be found in IMU.h
 //Log and SD card settings can be found in Logger.h
 //Motor settings can be found in MotorController.h
-//PID settings can be found in PIDcontroller.h
-/*** * * * DRONE SETTINGS * * * ***/
+/*** * * * ETTINGS * * * ***/
 
 //Time vars
 unsigned long startTime;         //Start time of flight (in milliseconds)
@@ -26,7 +25,7 @@ bool standbyLights = true;
 unsigned long lightChangeTime = 0;
 
 //Input vars
-int xyzr[4] = {0,0,0,0}; //Joystick inputs for x, y, z and rotation(yaw) (from -127 to 127)
+float xyzr[4] = {0,0,0,0}; //Joystick inputs for x, y, z and rotation(yaw) (from -127 to 127)
 float potPercent = 0;    //Percentage of the controllers potentiometer, used as a trim
 bool light = false;
 bool standbyButton = false;
@@ -36,7 +35,7 @@ IMU imu;
 
 //Hardware vars
 const int lightPin = 23;
-DroneRadio droneRadio;
+Radio radio;
 MotorController ESC;
 Logger logger;
 
@@ -65,13 +64,13 @@ void standby() {
     //Turn off all motors
     ESC.writeZero();
   
-    //Log the drone going into standby
+    //Log the device going into standby
     logger.logString("\n--- on standby ---\n");
 
     standbyStartTime = micros();
   }
 
-  droneRadio.timer = 0;
+  radio.timer = 0;
   //Blink lights
   if (millis()-lightChangeTime > 750) {
     lightChangeTime = millis();
@@ -116,24 +115,13 @@ void setup(){
   //delay(2000); //Wait for motors to finish arming. Not needed if motors are armed with init()
 
   //Log the settings
-  logger.logString("User input\n");
-  ////logger.logSetting("maxZdiff", ESC.maxZdiff, 2, 2, false);
-  ////logger.logSetting("potMaxDiff", ESC.potMaxDiff);
-  ////logger.logSetting("maxAngle", 127/pid.maxAngle);
-  logger.logString("\nOffsets\n");
-  ////logger.logSetting("motorOffset", ESC.offset, 4, 3, false);
-  logger.logSetting("angleOffset", imu.angleOffset, 3, 2);
-  ////logger.logSetting("defaultZ", ESC.defaultZ);
-  logger.logString("\nPerformance\n");
-  logger.logSetting("Loop rate", loopRate, false);
-  ////logger.logSetting("Pgain", pid.Pgain, 3, 2);
-  ////logger.logSetting("Igain", pid.Igain, 3, 4);
-  ////logger.logSetting("Dgain", pid.Dgain, 3, 3);
-  logger.logString("\nchangeLog,CHANGELOG GOES HERE\n");
-  logger.logString("Time (μs),Loop time (μs),Roll input,Pitch input,Vertical input,Yaw input,Pot,roll,pitch,Pr,Pp,Ir,Ip,Dr,Dp,radio,yaw");
+  logger.logString("AlPHI B. log\n");
+  logger.logString("\n\n\n\nChangelog\n");
+  logger.logString("CHANGELOG GOES HERE");
+  logger.logString("\nTime (μs),Loop time (μs),Roll input,Pitch input,Vertical input,Yaw input,Pot,roll,pitch,Pr,Pp,Ir,Ip,Dr,Dp,radio,yaw");
   
   //Set up communication
-  droneRadio.init();
+  radio.init();
 
   //Startup lights
   delay(10);
@@ -150,7 +138,7 @@ void setup(){
 
 void loop(){
   // Recieve input data
-  droneRadio.getInput();
+  radio.getInput();
 
   //Check standby status
   if (standbyButton and standbyStatus == 0) {
@@ -164,7 +152,7 @@ void loop(){
     standby();
   } else {
     //Check radio signal
-    droneRadio.checkSignal(loopTimeMicro(), loopTimestamp);
+    radio.checkSignal(loopTimeMicro(), loopTimestamp);
 
 
     /* Get current angle */
@@ -189,7 +177,7 @@ void loop(){
     if (logger.checkLogReady()) {
       logger.logTime(micros()-startTime-standbyOffset);
       for (int i=0; i<4; i++) {
-        logger.logData(xyzr[i], typeID.uint8);
+        logger.logData((uint8_t)(xyzr[i]*255), typeID.uint8);
       }
       logger.logData((uint8_t)(potPercent*255), typeID.uint8);
       for (int i=0; i<2; i++) {
@@ -200,7 +188,7 @@ void loop(){
           ////logger.logData(pid.PIDchange[i][j], typeID.float16k);
         }
       }
-      logger.logData((uint16_t)(droneRadio.timer/1000), typeID.uint16);
+      logger.logData((uint16_t)(radio.timer/1000), typeID.uint16);
       logger.logData(imu.currentAngle[2], typeID.float16);
 
       logger.write();

@@ -1,10 +1,10 @@
-#ifndef __DroneRadio_H__
-#define __DroneRadio_H__
+#ifndef __Radio_H__
+#define __Radio_H__
 
 //Import libraries
 #include <RF24.h>
 
-extern int xyzr[4];
+extern float xyzr[4];
 extern float potPercent;
 extern bool light;
 extern bool standbyButton;
@@ -12,10 +12,10 @@ extern bool standbyButton;
 extern void ABORT();
 
 /**
- * @class DroneRadio
+ * @class Radio
  * @brief Class to control radio
  */
-class DroneRadio {
+class Radio {
   public:
     /** Initialise the radio. */
     void init();

@@ -19,10 +19,13 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 
     loadSuccess &= logger->loadSetting(name, "pins", motors, motorCount);
     loadSuccess &= logger->loadSetting(name, "defaultValues", defaultValues, motorCount);
-    #if ESC_TYPE == ONESHOT125
-      loadSuccess &= logger->loadSetting(name, "signalFreq", &signalFreq);
-      maxDutyCycle = signalFreq/40.0f;
-    #endif
+    loadSuccess &= logger->loadSetting(name, "signalFreq", &signalFreq);
+    if (signalFreq > 0) {
+      float signalLength[2];
+      loadSuccess &= logger->loadSetting(name, "signalLength", signalLength, 2);
+      minDutyCycle = 100.0f * signalLength[0] / (1000000.0f/signalFreq);
+      maxDutyCycle = 100.0f * signalLength[1] / (1000000.0f/signalFreq);
+    }
   }
   if (!loadSuccess) {
     return false;
@@ -33,17 +36,9 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   //Arm ESCs
   while (millis() < 2500); //Wait for ESC startup
   digitalWrite(lightPin, HIGH);
-  #if ESC_TYPE == PWM
-    motorSignal = new Servo[motorCount];
-  #elif ESC_TYPE == ONESHOT125
-    motorSignal = new Teensy_PWM*[motorCount];
-  #endif
+  motorSignal = new Teensy_PWM*[motorCount];
   for (int i=0; i<motorCount; i++) {
-    #if ESC_TYPE == PWM
-      motorSignal[i].attach(motors[i], 1000, 2000);
-    #elif ESC_TYPE == ONESHOT125
-      motorSignal[i] = new Teensy_PWM(motors[i], signalFreq, 0.0f);
-    #endif
+    motorSignal[i] = new Teensy_PWM(motors[i], signalFreq, 0.0f);
     writeToMotor(i, 0);
   }
 
@@ -125,12 +120,8 @@ void MotorController::writeZero() {
 
 void MotorController::writeToMotor(int index, float value) {
   value = max(0.0f, min(value, 1000.0f));
-  #if ESC_TYPE == PWM
-    motorSignal[index].writeMicroseconds(1000 + toInt(value));
-  #elif ESC_TYPE == ONESHOT125
-    value = map(value, 0.0f, 1000.0f, maxDutyCycle/2.0f, maxDutyCycle);
-    motorSignal[index]->setPWM(motors[index], signalFreq, value);
-  #endif
+  value = map(value, 0.0f, 1000.0f, minDutyCycle, maxDutyCycle);
+  motorSignal[index]->setPWM(motors[index], signalFreq, value);
 }
 
 int MotorController::getPIDcount() {
@@ -150,22 +141,34 @@ void InputHandler::init(Logger &logger, MotorController* controller, const char*
       }
     }
   } else {
-    logger.loadSetting(parent, "motorCount", &outputPinCount);
+    logger.loadSetting(parent, "Controls", name, "pinCount", &outputPinCount);
     outputPin = new int[outputPinCount];
     logger.loadSetting(parent, "Controls", name, "pins", outputPin, outputPinCount);
   }
 
-  input = 0.0;////TODO: implement
+  const char* inputStr;
+  logger.loadSetting(parent, "Controls", name, "input", &inputStr);
+  if (strcmp(inputStr, "potentiometer") == 0) {
+    input = &potPercent;
+  } else if (strcmp(inputStr, "left stick horiz") == 0) {
+    input = &xyzr[0];
+  } else if (strcmp(inputStr, "left stick vert") == 0) {
+    input = &xyzr[1];
+  } else if (strcmp(inputStr, "right stick horiz") == 0) {
+    input = &xyzr[2];
+  } else if (strcmp(inputStr, "right stick vert") == 0) {
+    input = &xyzr[3];
+  }
 }
 
 void InputHandler::processInput(MotorController* controller) {
   float output;
-  if (input == .5) {
+  if (*input == .5f) {
     output = midControl;
-  } else if (input < .5) {
-    output = map(input, 0.0, .5, minControl, midControl);
+  } else if (*input < .5f) {
+    output = map(*input, .0f, .5f, minControl, midControl);
   } else {
-    output = map(input, .5, 1.0, midControl, maxControl);
+    output = map(*input, .5f, 1.0f, midControl, maxControl);
   }
 
   if (outputPinCount > 0) {
