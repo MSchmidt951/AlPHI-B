@@ -12,7 +12,6 @@
 
 class InputHandler;
 
-extern const int lightPin;
 extern float xyzr[4];
 extern float potPercent;
 
@@ -150,12 +149,5 @@ class InputHandler {
     const char* PIDTargetStr;
     ///Reference to the PID controller to control
     PIDcontroller* PIDTarget;
-};
-
-class HardwareController {
-  public:
-    void setRGB(int r, int g, int b);
-  private:
-    int RGB_LED;
 };
 #endif

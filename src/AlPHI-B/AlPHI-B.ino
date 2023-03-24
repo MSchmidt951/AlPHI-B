@@ -1,3 +1,4 @@
+#include "HardwareController.h"
 #include "IMU.h"
 #include "Logger.h"
 #include "MotorController.h"
@@ -8,10 +9,12 @@
 const int loopRate = 2000; //Maxiumum loop rate (Hz)
 const int maxLoopTime = 1000000/loopRate; //Maximum loop time (us)
 
+//Most of the settings are configured in settings.json
+
 //IMU and sensor settings can be found in IMU.h
 //Log and SD card settings can be found in Logger.h
 //Motor settings can be found in MotorController.h
-/*** * * * ETTINGS * * * ***/
+/*** * * * SETTINGS * * * ***/
 
 //Time vars
 unsigned long startTime;         //Start time of flight (in milliseconds)
@@ -34,19 +37,12 @@ bool standbyButton = false;
 IMU imu;
 
 //Hardware vars
-const int lightPin = 23;
 Radio radio;
 MotorController ESC;
 Logger logger;
+HardwareController hw;
 
 //Functions
-
-void blink(int d){
-  digitalWrite(lightPin, HIGH);
-  delay(d);
-  digitalWrite(lightPin, LOW);
-  delay(d);
-}
 
 //Return the loop time in milliseconds
 float loopTime(){
@@ -76,7 +72,11 @@ void standby() {
     lightChangeTime = millis();
     standbyLights = !standbyLights;
   }
-  digitalWrite(lightPin, standbyLights);
+  if (standbyLights) {
+    hw.setRGB(0, 0, RGB_MAX);
+  } else {
+    hw.setRGB(0, 0, 0);
+  }
 }
 
 void ABORT(){ //This is also used to turn off all the motors after landing
@@ -86,14 +86,15 @@ void ABORT(){ //This is also used to turn off all the motors after landing
   
   for (;;){
     ESC.writeZero();
-    blink(111);
-    blink(1234);
+    hw.blink(111, 255, 0, 0);
+    hw.blink(1234, RGB_MAX, 0, 0);
   }
 }
 
 
 void setup(){
-  pinMode(lightPin, OUTPUT);
+  //Set up Hardware Controller
+  hw.init();
 
   //Set up SD card
   logger.init();
@@ -116,8 +117,8 @@ void setup(){
 
   //Log the settings
   logger.logString("AlPHI B. log\n");
-  logger.logString("\n\n\n\nChangelog\n");
-  logger.logString("CHANGELOG GOES HERE");
+  logger.logString("\n\n\nChangelog\n");
+  logger.logString("CHANGELOG GOES HERE\n");
   logger.logString("\nTime (μs),Loop time (μs),Roll input,Pitch input,Vertical input,Yaw input,Pot,roll,pitch,Pr,Pp,Ir,Ip,Dr,Dp,radio,yaw");
   
   //Set up communication
@@ -126,8 +127,9 @@ void setup(){
   //Startup lights
   delay(10);
   for (int i=0; i<3; i++){
-    blink(100);
+    hw.blink(100, 0, 255, 0);
   }
+  hw.setRGB(0, RGB_MAX, 0);
 
   //Start the clock
   startTime = micros();
@@ -169,7 +171,6 @@ void loop(){
 
 
     /* Calculate and apply hardware values */
-    digitalWrite(lightPin, light);
     ESC.write();
 
 

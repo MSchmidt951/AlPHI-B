@@ -2,12 +2,13 @@
   #include "Arduino.h"
 #endif
 #include "IMU.h"
+#include "HardwareController.h"
 
 int IMU::init(Logger &logger) {
   //Load settings from the SD card
   logger.loadSetting("IMU", "angleOffset", angleOffset, 3);
 
-  digitalWrite(lightPin, HIGH);
+  hw.setRGB(0, RGB_MAX, RGB_MAX);
   #if IMU_TYPE == IMU_MPU6050
     Wire.begin();
     Wire.setClock(400000);
@@ -78,7 +79,7 @@ int IMU::init(Logger &logger) {
     }
   #endif
 
-  digitalWrite(lightPin, LOW);
+  hw.setRGB(0, 0, 0);
   return 0;
 }
 

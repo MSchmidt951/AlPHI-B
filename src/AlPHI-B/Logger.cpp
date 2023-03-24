@@ -1,4 +1,5 @@
 #include "Logger.h"
+#include "HardwareController.h"
 
 void Logger::init() {
   #if STORAGE_TYPE == SD_CARD
@@ -25,7 +26,7 @@ void Logger::init() {
 void Logger::checkSD(bool condition) {
   if (!condition) {
     for (;;) {
-      blink(1500);
+      hw.blink(1500, RGB_MAX/2, RGB_MAX/2, RGB_MAX/2);
     }
   }
 }
@@ -70,7 +71,7 @@ void Logger::logSetting(String name, const float *arr, int len, int decimals, bo
   logArray(arr, len, decimals);
 }
 
-int Logger::getInputCount(String name) {
+int Logger::getInputCount(const char* name) {
   #if STORAGE_TYPE == SD_CARD
     return sdSettings[name]["Controls"].size();
   #else
@@ -80,10 +81,15 @@ int Logger::getInputCount(String name) {
 
 const char* Logger::getInputName(const char* parent, int index) {
   #if STORAGE_TYPE == SD_CARD
-    return sdSettings[parent]["Controls"].getElement(index);
-  #else
-    return "";
+    int i=0;
+    for (JsonPair keyValue : sdSettings[parent]["Controls"].as<JsonObject>()) {
+      if (index == i) {
+        return keyValue.key().c_str();
+      }
+      i++;
+    }
   #endif
+  return "";
 }
 
 bool Logger::checkLogReady() {

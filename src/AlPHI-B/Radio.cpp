@@ -41,7 +41,6 @@ void Radio::getInput() {
        xyzr[i] = 0.5;
       }
     }
-    xyzr[1] = -xyzr[1]; //Correct pitch
     potPercent = data[4]/255.0; //Put between 0-1
     //Get binary info from packet
     light = bitRead(data[6], 2);

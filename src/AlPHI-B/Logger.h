@@ -17,7 +17,6 @@
   #include "Arduino.h"
 #endif
 
-extern void blink(int);
 extern const int loopRate;
 
 
@@ -99,7 +98,7 @@ class Logger {
      *  @param[in] name Name of the object
      *  @returns Total number of inputs the object has
      */
-    int getInputCount(String name);
+    int getInputCount(const char* name);
     /** Get the name of an input
      *  
      *  @param[in] parent The parent object that the controls belong to

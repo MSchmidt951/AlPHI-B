@@ -23,7 +23,6 @@
 //Import files
 #include "Logger.h"
 
-extern const int lightPin;
 extern float loopTime();
 
 

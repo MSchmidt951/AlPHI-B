@@ -1,5 +1,6 @@
 #include "Arduino.h"
 #include "MotorController.h"
+#include "HardwareController.h"
 
 int toInt(float f) {
   return int(f + .5);
@@ -35,7 +36,6 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 
   //Arm ESCs
   while (millis() < 2500); //Wait for ESC startup
-  digitalWrite(lightPin, HIGH);
   motorSignal = new Teensy_PWM*[motorCount];
   for (int i=0; i<motorCount; i++) {
     motorSignal[i] = new Teensy_PWM(motors[i], signalFreq, 0.0f);
@@ -43,21 +43,22 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   }
 
   if (test) {
+    hw.setRGB(0, 0, 15);
     delay(2000);
-    digitalWrite(lightPin, LOW);
   
     //Test spin motors
     for (int i=0; i<4; i++) {
       delay(100);
-      digitalWrite(lightPin, HIGH);
+      hw.setRGB(0, 0, RGB_MAX);
       writeToMotor(i, 55);
       delay(300);
       writeToMotor(i, 0);
-      digitalWrite(lightPin, LOW);
+      hw.setRGB(0, 0, 0);
     }
   
     //Give the motor some time to stop spinning before continuing with the program
     delay(250);
+    hw.setRGB(80, 18, 2);
   }
 
   return true;

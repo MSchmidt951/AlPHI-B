@@ -1,5 +1,6 @@
 #include "PIDcontroller.h"
 #include "MotorController.h"
+#include "HardwareController.h"
 
 void PIDcontroller::init(Logger &logger, const char* parent, const char* name, float* targetPtr, float* currentPtr, float* currentDiffPtr) {
   logger.loadSetting(parent, "PIDs", name, "PIDGains", PIDGains, 3);
