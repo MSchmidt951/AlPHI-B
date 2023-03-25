@@ -86,6 +86,7 @@ void ABORT(){ //This is also used to turn off all the motors after landing
   
   for (;;){
     ESC.writeZero();
+    hw.buzz(400, 111);
     hw.blink(111, 255, 0, 0);
     hw.blink(1234, RGB_MAX, 0, 0);
   }
@@ -93,11 +94,14 @@ void ABORT(){ //This is also used to turn off all the motors after landing
 
 
 void setup(){
-  //Set up Hardware Controller
-  hw.init();
+  //Set up LED
+  hw.initLED();
 
   //Set up SD card
   logger.init();
+
+  //Set up Hardware Controller
+  hw.init(logger);
 
   //Set up inertial measurement unit
   if (imu.init(logger)) {
