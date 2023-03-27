@@ -12,7 +12,8 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   name = motorName;
 
   //Load settings from the SD card
-  bool loadSuccess = logger->loadSetting(name, "motorCount", &motorCount);
+  motorCount = logger->getArraySize(name, "pins");
+  bool loadSuccess = motorCount != -1;
   if (loadSuccess) {
     motors = new int[motorCount];
     defaultValues = new float[motorCount];
@@ -45,7 +46,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   if (test) {
     hw.setRGB(0, 0, 15);
     delay(2000);
-  
+
     //Test spin motors
     for (int i=0; i<4; i++) {
       delay(100);
@@ -55,7 +56,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
       writeToMotor(i, 0);
       hw.setRGB(0, 0, 0);
     }
-  
+
     //Give the motor some time to stop spinning before continuing with the program
     delay(250);
     hw.setRGB(80, 18, 2);
@@ -65,7 +66,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 }
 
 void MotorController::setupInputs() {
-  inputCount = logger->getInputCount(name);
+  inputCount = logger->getArraySize(name, "Controls");
   inputs = new InputHandler[inputCount];
   for (int i=0; i<inputCount; i++) {
     inputs[i].init(*logger, this, name, logger->getInputName(name, i));
@@ -142,7 +143,7 @@ void InputHandler::init(Logger &logger, MotorController* controller, const char*
       }
     }
   } else {
-    logger.loadSetting(parent, "Controls", name, "pinCount", &outputPinCount);
+    outputPinCount = logger.getArraySize(parent, "Controls", name, "pins");
     outputPin = new int[outputPinCount];
     logger.loadSetting(parent, "Controls", name, "pins", outputPin, outputPinCount);
   }

@@ -5,11 +5,11 @@
 void PIDcontroller::init(Logger &logger, const char* parent, const char* name, float* targetPtr, float* currentPtr, float* currentDiffPtr) {
   logger.loadSetting(parent, "PIDs", name, "PIDGains", PIDGains, 3);
 
-  logger.loadSetting(parent, "PIDs", name, "positiveCount", &positivePinCount);
+  positivePinCount = logger.getArraySize(parent, "PIDs", name, "positive");
   positivePins = new int[positivePinCount];
   logger.loadSetting(parent, "PIDs", name, "positive", positivePins, positivePinCount);
 
-  logger.loadSetting(parent, "PIDs", name, "negativeCount", &negativePinCount);
+  negativePinCount = logger.getArraySize(parent, "PIDs", name, "negative");
   negativePins = new int[negativePinCount];
   logger.loadSetting(parent, "PIDs", name, "negative", negativePins, negativePinCount);
 

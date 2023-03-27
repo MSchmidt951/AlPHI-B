@@ -10,10 +10,10 @@
 #include "Logger.h"
 #include "PIDcontroller.h"
 
-class InputHandler;
-
 extern float xyzr[4];
 extern float potPercent;
+
+class InputHandler;
 
 
 /** Rounds a float to the nearest integer */

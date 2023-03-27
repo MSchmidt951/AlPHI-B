@@ -93,12 +93,22 @@ class Logger {
      *  @param[in] seperator Whether or not to add a seperator before logging the variable
      */
     void logSetting(String name, const float *arr, int len, int decimals, bool seperator=true);
-    /** Get the amount of controls that an object has
+    /** Get the size of an array in settings.json
      *  
-     *  @param[in] name Name of the object
-     *  @returns Total number of inputs the object has
+     *  @param[in] parent Parent of the setting
+     *  @param[in] name Name of the setting
+     *  @returns Size of the array
      */
-    int getInputCount(const char* name);
+    int getArraySize(const char* parent, const char* name);
+    /** Get the size of an array in settings.json
+     *  
+     *  @param[in] parent Parent of the setting
+     *  @param[in] type Type of setting
+     *  @param[in] name Name of the setting
+     *  @param[in] subSetting Name of the sub setting
+     *  @returns Size of the array
+     */
+    int getArraySize(const char* parent, const char* type, const char* name, const char* subSetting);
     /** Get the name of an input
      *  
      *  @param[in] parent The parent object that the controls belong to
@@ -151,6 +161,10 @@ class Logger {
           if (len == 1) {
             var[0] = sdSettings[parent][name];
           } else {
+            if (len == -1) {
+              len = getArraySize(parent.c_str(), name.c_str());
+              var = new T[len];
+            }
             for (int i=0; i<len; i++) {
               var[i] = sdSettings[parent][name][i];
             }
@@ -176,6 +190,10 @@ class Logger {
           if (len == 1) {
             var[0] = sdSettings[parent][type][name][subSetting];
           } else {
+            if (len == -1) {
+              len = getArraySize(parent.c_str(), type.c_str(), name.c_str(), subSetting.c_str());
+              var = new T[len];
+            }
             for (int i=0; i<len; i++) {
               var[i] = sdSettings[parent][type][name][subSetting][i];
             }

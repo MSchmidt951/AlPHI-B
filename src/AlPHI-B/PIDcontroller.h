@@ -2,8 +2,9 @@
 #define __PIDcontroller_H__
 
 //Import files
-#include "IMU.h"
 #include "Logger.h"
+
+extern float loopTime();
 
 class MotorController;
 

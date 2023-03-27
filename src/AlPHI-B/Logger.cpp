@@ -71,9 +71,25 @@ void Logger::logSetting(String name, const float *arr, int len, int decimals, bo
   logArray(arr, len, decimals);
 }
 
-int Logger::getInputCount(const char* name) {
+int Logger::getArraySize(const char* parent, const char* name) {
   #if STORAGE_TYPE == SD_CARD
-    return sdSettings[name]["Controls"].size();
+    if (sdSettings[parent][name].isNull()) {
+      return -1;
+    } else {
+      return sdSettings[parent][name].size();
+    }
+  #else
+    return 0;
+  #endif
+}
+
+int Logger::getArraySize(const char* parent, const char* type, const char* name, const char* subSetting) {
+  #if STORAGE_TYPE == SD_CARD
+    if (sdSettings[parent][type][name][subSetting].isNull()) {
+      return -1;
+    } else {
+      return sdSettings[parent][type][name][subSetting].size();
+    }
   #else
     return 0;
   #endif
