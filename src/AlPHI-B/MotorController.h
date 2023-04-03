@@ -68,6 +68,8 @@ class MotorController {
      *  @returns Number of PID controllers attached to the controller
      */
     int getPIDcount();
+    int getMotorCount();
+    float getMotorPower(int index);
 
     ///An array containing all of the PID controllers
     PIDcontroller* PIDs;

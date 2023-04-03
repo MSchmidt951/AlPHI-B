@@ -20,24 +20,24 @@ void PIDcontroller::init(Logger &logger, const char* parent, const char* name, f
 }
 
 void PIDcontroller::calc(MotorController* controller) {
-  float PIDchange = 0;
+  PIDchange = 0;
 
   //Get difference between target and current angle
   lastErr = currentErr;
   currentErr = (*target)+inputOffset - (*current);
 
   //Get proportional change
-  PIDchange = currentErr * PIDGains[0]/1000.0;
+  PIDchange = currentErr * PIDGains[0]/1000.0f;
 
   //Get integral change
   iSum += currentErr * loopTime();
-  PIDchange += iSum * PIDGains[1]/1000.0;
+  PIDchange += iSum * PIDGains[1]/1000.0f;
 
   //Get derivative change
   if (currentDiff == NULL) {
     PIDchange += ((currentErr - lastErr)/loopTime()) * -PIDGains[2];
   } else {
-    PIDchange += (*currentDiff) * -PIDGains[2];
+    PIDchange += (*currentDiff) * -PIDGains[2]/1000.0f;
   }
 
   if (abs(PIDchange) > .001) {
@@ -62,4 +62,8 @@ void PIDcontroller::addInput(float input) {
 
 const char* PIDcontroller::getName() {
   return namePtr;
+}
+
+float PIDcontroller::getPIDchange() {
+  return PIDchange;
 }

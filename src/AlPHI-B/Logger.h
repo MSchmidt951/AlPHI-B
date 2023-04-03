@@ -155,10 +155,10 @@ class Logger {
      *  @param[in] len Length of the array (if an array is passed)
      *  @returns Returns true if setting loaded correctly
      */
-    template <typename T> bool loadSetting(String parent, String name, T *var, int len=1) {
+    template <typename T> bool loadSetting(String parent, String name, T *var, int len=0) {
       #if STORAGE_TYPE == SD_CARD
         if (!sdSettings[parent][name].isNull()) {
-          if (len == 1) {
+          if (len == 0) {
             var[0] = sdSettings[parent][name];
           } else {
             if (len == -1) {
@@ -184,10 +184,10 @@ class Logger {
      *  @param[in] len Length of the array
      *  @returns Returns true if setting loaded correctly
      */
-    template <typename T> bool loadSetting(String parent, String type, String name, String subSetting, T *var, int len=1) {
+    template <typename T> bool loadSetting(String parent, String type, String name, String subSetting, T *var, int len=0) {
       #if STORAGE_TYPE == SD_CARD
         if (!sdSettings[parent][type][name][subSetting].isNull()) {
-          if (len == 1) {
+          if (len == 0) {
             var[0] = sdSettings[parent][type][name][subSetting];
           } else {
             if (len == -1) {

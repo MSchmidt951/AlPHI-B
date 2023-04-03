@@ -109,7 +109,7 @@ const char* Logger::getInputName(const char* parent, int index) {
 }
 
 bool Logger::checkLogReady() {
-  if (loopsSinceLog >= logDiv) {
+  if (loopsSinceLog >= logDiv-1) {
     loopsSinceLog = 0;
     return true;
   } else {

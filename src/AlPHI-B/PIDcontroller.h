@@ -39,6 +39,7 @@ class PIDcontroller {
      *  @returns the name of the object
      */
     const char* getName();
+    float getPIDchange();
 
   private:
     ///The name of the PID controller, used for loading settings from settings.json
@@ -69,5 +70,6 @@ class PIDcontroller {
     float lastErr = 0;
     ///The sum of the difference between the current and target value used to calculate the integral change
     float iSum = 0;
+    float PIDchange;
 };
 #endif

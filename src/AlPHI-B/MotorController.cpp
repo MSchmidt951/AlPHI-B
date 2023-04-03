@@ -115,20 +115,31 @@ void MotorController::write() {
 }
 
 void MotorController::writeZero() {
-  for (int i=0; i<4; i++) {
-    writeToMotor(i, 0);
+  if (name) {
+    for (int i=0; i<4; i++) {
+      writeToMotor(i, 0);
+    }
   }
 }
 
 void MotorController::writeToMotor(int index, float value) {
   value = max(0.0f, min(value, 1000.0f));
   value = map(value, 0.0f, 1000.0f, minDutyCycle, maxDutyCycle);
-  motorSignal[index]->setPWM(motors[index], signalFreq, value);
+  motorSignal[index]->setPWM(motors[index], signalFreq, value+1000.0f);
 }
 
 int MotorController::getPIDcount() {
   return PIDcount;
 }
+
+int MotorController::getMotorCount() {
+  return motorCount;
+}
+
+float MotorController::getMotorPower(int index) {
+  return motorPower[index];
+}
+
 
 void InputHandler::init(Logger &logger, MotorController* controller, const char* parent, const char* name) {
   logger.loadSetting(parent, "Controls", name, "min", &minControl);
