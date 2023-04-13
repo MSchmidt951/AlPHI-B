@@ -95,10 +95,10 @@ int Logger::getArraySize(const char* parent, const char* type, const char* name,
   #endif
 }
 
-const char* Logger::getInputName(const char* parent, int index) {
+const char* Logger::getIndexName(const char* parent, const char* type, int index) {
   #if STORAGE_TYPE == SD_CARD
     int i=0;
-    for (JsonPair keyValue : sdSettings[parent]["Controls"].as<JsonObject>()) {
+    for (JsonPair keyValue : sdSettings[parent][type].as<JsonObject>()) {
       if (index == i) {
         return keyValue.key().c_str();
       }

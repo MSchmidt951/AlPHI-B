@@ -109,13 +109,14 @@ class Logger {
      *  @returns Size of the array
      */
     int getArraySize(const char* parent, const char* type, const char* name, const char* subSetting);
-    /** Get the name of an input
+    /** Get the name of a setting from an index
      *  
-     *  @param[in] parent The parent object that the controls belong to
-     *  @param[in] index Index of the input to return
-     *  @returns Name of the input
+     *  @param[in] parent Parent of the setting
+     *  @param[in] type Type of setting
+     *  @param[in] index Index of the setting to return
+     *  @returns Name of the setting
      */
-    const char* getInputName(const char* parent, int index);
+    const char* getIndexName(const char* parent, const char* type, int index);
     /** Checks if data should be logged this loop
      *  
      *  @returns true if data should be logged

@@ -69,7 +69,7 @@ void MotorController::setupInputs() {
   inputCount = logger->getArraySize(name, "Controls");
   inputs = new InputHandler[inputCount];
   for (int i=0; i<inputCount; i++) {
-    inputs[i].init(*logger, this, name, logger->getInputName(name, i));
+    inputs[i].init(*logger, this, name, logger->getIndexName(name, "Controls", i));
   }
 }
 
