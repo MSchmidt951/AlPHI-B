@@ -1,9 +1,9 @@
 #include "HardwareController.h"
-#include "IMU.h"
 #include "Logger.h"
 #include "MotorController.h"
 #include "PIDcontroller.h"
 #include "Radio.h"
+#include "SensorController.h"
 
 /*** * * * SETTINGS * * * ***/
 const int loopRate = 2000; //Maxiumum loop rate (Hz)
@@ -11,9 +11,9 @@ const int maxLoopTime = 1000000/loopRate; //Maximum loop time (us)
 
 //Most of the settings are configured in settings.json
 
-//IMU and sensor settings can be found in IMU.h
 //Log and SD card settings can be found in Logger.h
 //Motor settings can be found in MotorController.h
+//Sensor settings can be found in SensorController.h
 /*** * * * SETTINGS * * * ***/
 
 //Time vars
@@ -28,13 +28,13 @@ bool standbyLights = true;
 unsigned long lightChangeTime = 0;
 
 //Input vars
-float xyzr[4] = {0,0,0,0}; //Joystick inputs for x, y, z and rotation(yaw) (from -127 to 127)
-float potPercent = 0;    //Percentage of the controllers potentiometer, used as a trim
+float xyzr[4] = {0.5, 0.5, 0.5, 0.5}; //Joystick inputs for x, y, z and rotation(yaw) (from 0 to 1)
+float potPercent = 0; //Percentage of the controllers potentiometer, used as a trim
 bool light = false;
 bool standbyButton = false;
 
 //Sensor vars
-IMU imu;
+SensorController sensors;
 
 //Hardware vars
 Radio radio;
@@ -103,9 +103,10 @@ void setup(){
   //Set up Hardware Controller
   hw.init(logger);
 
-  //Set up inertial measurement unit
-  if (imu.init(logger)) {
-    logger.logString("IMU error");
+  //Set up sensors
+  delay(1000);int err = sensors.init(logger);
+  if (err) {
+    logger.logString("Sensor error: " + String(err));
     ABORT();
   }
 
@@ -113,9 +114,9 @@ void setup(){
   if (!ESC.init(logger, "4in1_ESC", true)) {
     ABORT();
   }
-  ESC.addPID("roll",  0.0f, &imu.currentAngle[0], &imu.rRate[0]);
-  ESC.addPID("pitch", 0.0f, &imu.currentAngle[1], &imu.rRate[1]);
-  ESC.addPID("yaw",   0.0f, &imu.currentAngle[2], &imu.rRate[2]);
+  ESC.addPID("roll",  0.0f, &sensors.currentAngle[0], &sensors.rRate[0]);
+  ESC.addPID("pitch", 0.0f, &sensors.currentAngle[1], &sensors.rRate[1]);
+  ESC.addPID("yaw",   0.0f, &sensors.currentAngle[2], &sensors.rRate[2]);
   ESC.setupInputs();
   //delay(2000); //Wait for motors to finish arming. Not needed if motors are armed with init()
 
@@ -123,8 +124,8 @@ void setup(){
   logger.logString("AlPHI B. log\n");
   logger.logString("\n\n\nChangelog\n");
   logger.logString("CHANGELOG GOES HERE\n");
-  logger.logString("\nTime (μs),Loop time (μs),Roll input,Pitch input,Vertical input,Yaw input,Pot,roll,pitch,Pr,Pp,Ir,Ip,Dr,Dp,radio,yaw");
-  
+  logger.logString("\nTime (μs),Loop time (μs),Roll input,Pitch input,Vertical input,Yaw input,Pot,roll,pitch,yaw,FL,FR,BL,BR,PID roll,PID pitch,PID yaw,radio");
+
   //Set up communication
   radio.init();
 
@@ -153,7 +154,7 @@ void loop(){
     standbyOffset += micros() - standbyStartTime;
     standbyStatus = 0;
   }
-  
+
   if (standbyStatus > 0) {
     standby();
   } else {
@@ -162,8 +163,8 @@ void loop(){
 
 
     /* Get current angle */
-    imu.updateAngle();
-    
+    sensors.updateAngle();
+
     //Get loop time
     lastLoopTimestamp = loopTimestamp;
     loopTimestamp = micros()-standbyOffset;
@@ -180,21 +181,22 @@ void loop(){
 
     /* Log flight info */
     if (logger.checkLogReady()) {
-      logger.logTime(micros()-startTime-standbyOffset);
+      logger.logTime(micros()-startTime-standbyOffset); //Time & loop time
       for (int i=0; i<4; i++) {
-        logger.logData((uint8_t)(xyzr[i]*255), typeID.uint8);
+        logger.logData((uint8_t)(xyzr[i]*255), typeID.uint8); //Joystick
       }
-      logger.logData((uint8_t)(potPercent*255), typeID.uint8);
+      logger.logData((uint8_t)(potPercent*255), typeID.uint8); //Potentiometer
       for (int i=0; i<2; i++) {
-        logger.logData(imu.currentAngle[i], typeID.float32);
+        logger.logData(sensors.currentAngle[i], typeID.float32); //Roll and pitch
       }
-      for (int i=0; i<3; i++) {
-        for (int j=0; j<2; j++) {
-          ////logger.logData(pid.PIDchange[i][j], typeID.float16k);
-        }
+      logger.logData(sensors.currentAngle[2], typeID.float16); //Yaw
+      for (int i=0; i<ESC.getMotorCount(); i++) {
+        logger.logData(ESC.getMotorPower(i), typeID.float16); //Motor power
       }
-      logger.logData((uint16_t)(radio.timer/1000), typeID.uint16);
-      logger.logData(imu.currentAngle[2], typeID.float16);
+      for (int i=0; i<ESC.getPIDcount(); i++) {
+        logger.logData(ESC.PIDs[i].getPIDchange(), typeID.float16k); //PID change
+      }
+      logger.logData((uint16_t)(radio.timer/1000), typeID.uint16); //Radio
 
       logger.write();
     }
