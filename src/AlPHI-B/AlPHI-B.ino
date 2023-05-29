@@ -12,7 +12,7 @@ const int maxLoopTime = 1000000/loopRate; //Maximum loop time (us)
 //Most of the settings are configured in settings.json
 
 //Log and SD card settings can be found in Logger.h
-//Motor settings can be found in MotorController.h
+//Max PIDs per MotorController object can be set in MotorController.h
 //Sensor settings can be found in SensorController.h
 /*** * * * SETTINGS * * * ***/
 
@@ -104,7 +104,7 @@ void setup(){
   hw.init(logger);
 
   //Set up sensors
-  delay(1000);int err = sensors.init(logger);
+  int err = sensors.init(logger);
   if (err) {
     logger.logString("Sensor error: " + String(err));
     ABORT();

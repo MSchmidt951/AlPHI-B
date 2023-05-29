@@ -16,11 +16,11 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   bool loadSuccess = motorCount != -1;
   if (loadSuccess) {
     motors = new int[motorCount];
-    defaultValues = new float[motorCount];
     motorPower = new float[motorCount];
+    armValues = new float[motorCount];
+    defaultValues = new float[motorCount];
 
     loadSuccess &= logger->loadSetting(name, "pins", motors, motorCount);
-    loadSuccess &= logger->loadSetting(name, "defaultValues", defaultValues, motorCount);
     loadSuccess &= logger->loadSetting(name, "signalFreq", &signalFreq);
     if (signalFreq > 0) {
       float signalLength[2];
@@ -28,6 +28,9 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
       minDutyCycle = 100.0f * signalLength[0] / (1000000.0f/signalFreq);
       maxDutyCycle = 100.0f * signalLength[1] / (1000000.0f/signalFreq);
     }
+    loadSuccess &= logger->loadSetting(name, "armValues", armValues, motorCount);
+
+    loadSuccess &= logger->loadSetting(name, "defaultValues", defaultValues, motorCount);
   }
   if (!loadSuccess) {
     return false;
@@ -39,8 +42,12 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   while (millis() < 2500); //Wait for ESC startup
   motorSignal = new Teensy_PWM*[motorCount];
   for (int i=0; i<motorCount; i++) {
-    motorSignal[i] = new Teensy_PWM(motors[i], signalFreq, 0.0f);
-    writeToMotor(i, 0);
+    motorSignal[i] = new Teensy_PWM(motors[i], signalFreq, armValues[i]);
+    if (motorSignal[i]) {
+      motorSignal[i]->setPWM();
+    } else {
+      return false;
+    }
   }
 
   if (test) {
@@ -51,8 +58,8 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
     for (int i=0; i<4; i++) {
       delay(100);
       hw.setRGB(0, 0, RGB_MAX);
-      writeToMotor(i, 55);
-      delay(300);
+      writeToMotor(i, 100);
+      delay(500);
       writeToMotor(i, 0);
       hw.setRGB(0, 0, 0);
     }
@@ -107,7 +114,7 @@ void MotorController::write() {
 
   //Apply output to motor
   for (int i=0; i<motorCount; i++) {
-    motorPower[i] = min(max(0.0f, motorPower[i]*1000), 1000.0f); //Limit values to 0 - 1000
+    motorPower[i] = motorPower[i] * 1000;
 
     //Round motor power and apply it to the ESC
     writeToMotor(i, motorPower[i]);
@@ -125,7 +132,7 @@ void MotorController::writeZero() {
 void MotorController::writeToMotor(int index, float value) {
   value = max(0.0f, min(value, 1000.0f));
   value = map(value, 0.0f, 1000.0f, minDutyCycle, maxDutyCycle);
-  motorSignal[index]->setPWM(motors[index], signalFreq, value+1000.0f);
+  motorSignal[index]->setPWM(motors[index], signalFreq, value);
 }
 
 int MotorController::getPIDcount() {
@@ -148,7 +155,7 @@ void InputHandler::init(Logger &logger, MotorController* controller, const char*
     midControl = (minControl + maxControl) / 2;
   }
   if (logger.loadSetting(parent, "Controls", name, "PIDTarget", &PIDTargetStr)) {
-    for (int i; i<controller->getPIDcount(); i++) {
+    for (int i=0; i<controller->getPIDcount(); i++) {
       if (strcmp(controller->PIDs[i].getName(), PIDTargetStr) == 0) {
         PIDTarget = &controller->PIDs[i];
       }

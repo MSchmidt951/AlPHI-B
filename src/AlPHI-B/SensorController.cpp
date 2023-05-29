@@ -295,9 +295,9 @@ int Sensor::init(Logger &logger) {
       gyroOffset[0] = -0.07602962;////TODO: make this able to be set in settings.json
       gyroOffset[1] =  0.34954908;
       gyroOffset[2] = -0.24275769;
-    } else {
-      return err;
     }
+
+    return err;
   }
 
   void S_ICM42688::getValue(SensorController &controller) {

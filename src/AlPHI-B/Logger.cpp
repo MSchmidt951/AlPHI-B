@@ -73,11 +73,7 @@ void Logger::logSetting(String name, const float *arr, int len, int decimals, bo
 
 int Logger::getArraySize(const char* parent, const char* name) {
   #if STORAGE_TYPE == SD_CARD
-    if (sdSettings[parent][name].isNull()) {
-      return -1;
-    } else {
-      return sdSettings[parent][name].size();
-    }
+    return getArraySize(sdSettings[parent][name]);
   #else
     return 0;
   #endif
@@ -85,11 +81,7 @@ int Logger::getArraySize(const char* parent, const char* name) {
 
 int Logger::getArraySize(const char* parent, const char* type, const char* name, const char* subSetting) {
   #if STORAGE_TYPE == SD_CARD
-    if (sdSettings[parent][type][name][subSetting].isNull()) {
-      return -1;
-    } else {
-      return sdSettings[parent][type][name][subSetting].size();
-    }
+    return getArraySize(sdSettings[parent][type][name][subSetting]);
   #else
     return 0;
   #endif
@@ -97,15 +89,10 @@ int Logger::getArraySize(const char* parent, const char* type, const char* name,
 
 const char* Logger::getIndexName(const char* parent, const char* type, int index) {
   #if STORAGE_TYPE == SD_CARD
-    int i=0;
-    for (JsonPair keyValue : sdSettings[parent][type].as<JsonObject>()) {
-      if (index == i) {
-        return keyValue.key().c_str();
-      }
-      i++;
-    }
+    return getIndexName(sdSettings[parent][type], index);
+  #else
+    return "";
   #endif
-  return "";
 }
 
 bool Logger::checkLogReady() {
@@ -317,3 +304,25 @@ void Logger::binToStr() {
     bufIndex %= sizeof(buf) * 8;
   }
 }
+
+#if STORAGE_TYPE == SD_CARD
+  int Logger::getArraySize(JsonVariant jsonVar) {
+    if (jsonVar.isNull()) {
+      return -1;
+    } else {
+      return jsonVar.size();
+    }
+  }
+
+  const char* Logger::getIndexName(JsonVariant jsonVar, int index) {
+    int i=0;
+    for (JsonPair keyValue : jsonVar.as<JsonObject>()) {
+      if (index == i) {
+        return keyValue.key().c_str();
+      }
+      i++;
+    }
+
+    return "";
+  }
+#endif

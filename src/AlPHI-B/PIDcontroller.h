@@ -34,16 +34,28 @@ class PIDcontroller {
      *  @param[in] input Value to offset the target by
      */
     void addInput(float input);
+    /** Enables PID controller */
+    void enable();
+    /** Disables PID controller */
+    void disable();
     /** Retrieves the name of the object
      *  
      *  @returns the name of the object
      */
     const char* getName();
+    /** Gets total change from the PID calculations for the current loop
+     *  
+     *  @returns total change from the PID calculations
+     */
     float getPIDchange();
 
   private:
     ///The name of the PID controller, used for loading settings from settings.json
     const char* namePtr;
+    ///Holds if the PID is enabled
+    bool enabled = true;
+    ///Holds if the PID was disabled last loop
+    bool wasDisabled = true;
     ///Number of positive pins
     int positivePinCount = 0;
     ///Array containing the indexes of pins which are affected positively by the PID
@@ -70,6 +82,7 @@ class PIDcontroller {
     float lastErr = 0;
     ///The sum of the difference between the current and target value used to calculate the integral change
     float iSum = 0;
+    ///Total change from the PID calculations for the current loop
     float PIDchange;
 };
 #endif

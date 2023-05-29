@@ -68,7 +68,16 @@ class MotorController {
      *  @returns Number of PID controllers attached to the controller
      */
     int getPIDcount();
+    /** Get the number of motors that the controller has
+     *  
+     *  @returns Number of motors that the controller has
+     */
     int getMotorCount();
+    /** Gets the amount of power that is being applied to a specific motor
+     *  
+     *  @param[in] index Index of the motor
+     *  @returns Power of the motor
+     */
     float getMotorPower(int index);
 
     ///An array containing all of the PID controllers
@@ -95,6 +104,8 @@ class MotorController {
     ///Maximum duty cycle of the signal
     float maxDutyCycle;
 
+    ///Percentage at which the motors are armed, usually 0 (or 0.5 for bi-directional motors)
+    float* armValues;
     ///The default percentage of each of the motors
     float* defaultValues;
     ///Current percentage of each motor

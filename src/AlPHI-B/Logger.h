@@ -22,7 +22,7 @@ extern const int loopRate;
 
 /* Settings */
 ///The max amont of buffer sections, each being 4 bytes long
-const int logBufferLen = 24;
+const int logBufferLen = 80;
 ///Sets the logging rate (data is logged every logDiv loops)
 const int logDiv = 1;
 ///Reserve enough space for 10 mins
@@ -158,27 +158,15 @@ class Logger {
      */
     template <typename T> bool loadSetting(String parent, String name, T *var, int len=0) {
       #if STORAGE_TYPE == SD_CARD
-        if (!sdSettings[parent][name].isNull()) {
-          if (len == 0) {
-            var[0] = sdSettings[parent][name];
-          } else {
-            if (len == -1) {
-              len = getArraySize(parent.c_str(), name.c_str());
-              var = new T[len];
-            }
-            for (int i=0; i<len; i++) {
-              var[i] = sdSettings[parent][name][i];
-            }
-          }
-          return true;
-        }
+        return loadSettingJSON(sdSettings[parent][name], var, len);
+      #else
+        return false;
       #endif
-      return false;
     }
     /** Load a setting from storage
      *  
      *  @param[in] parent Parent object of the setting
-     *  @param[in] type Type of setting ("Controls" or "PIDs")
+     *  @param[in] type Type of setting
      *  @param[in] name Name of the setting
      *  @param[in] subSetting Name of the sub setting
      *  @param[out] var Variable to set, if var is not an array, the address is passed instead
@@ -187,22 +175,10 @@ class Logger {
      */
     template <typename T> bool loadSetting(String parent, String type, String name, String subSetting, T *var, int len=0) {
       #if STORAGE_TYPE == SD_CARD
-        if (!sdSettings[parent][type][name][subSetting].isNull()) {
-          if (len == 0) {
-            var[0] = sdSettings[parent][type][name][subSetting];
-          } else {
-            if (len == -1) {
-              len = getArraySize(parent.c_str(), type.c_str(), name.c_str(), subSetting.c_str());
-              var = new T[len];
-            }
-            for (int i=0; i<len; i++) {
-              var[i] = sdSettings[parent][type][name][subSetting][i];
-            }
-          }
-          return true;
-        }
+        return loadSettingJSON(sdSettings[parent][type][name][subSetting], var, len);
+      #else
+        return false;
       #endif
-      return false;
     }
     /** Log data to the binary log file
      *  
@@ -264,6 +240,46 @@ class Logger {
     /** Converts the binary log 'log.bin' to the readable file 'log_0.csv' */
     void binToStr();
 
+    #if STORAGE_TYPE == SD_CARD
+      /** Get the size of a JSON object
+       *  
+       *  @param[in] jsonVar JSON variant to get the size of
+       *  @returns Size of the object
+       */
+      int getArraySize(JsonVariant jsonVar);
+      /** Get the name of a setting from an index
+       *  
+       *  @param[in] jsonVar JSON variant to get the index from
+       *  @param[in] index Index of the setting to return
+       *  @returns Name of the setting
+       */
+      const char* getIndexName(JsonVariant jsonVar, int index);
+      /** Load a setting from storage with a JSON object
+       *  
+       *  @param[in] setting A JsonVariant object containing the setting
+       *  @param[out] var Variable to set, if var is not an array, the address is passed instead
+       *  @param[in] len Length of the array
+       *  @returns Returns true if setting loaded correctly
+       */
+      template <typename T> bool loadSettingJSON(JsonVariant setting, T *var, int len) {
+        if (!setting.isNull()) {
+          if (len == 0) {
+            var[0] = setting;
+          } else {
+            if (len == -1) {
+              len = setting.size();
+              var = new T[len];
+            }
+            for (int i=0; i<len; i++) {
+              var[i] = setting[i];
+            }
+          }
+          return true;
+        }
+        return false;
+      }
+    #endif
+
     ///The number of loops since data has been logged
     uint8_t loopsSinceLog = 255;
     //File variables
@@ -282,11 +298,13 @@ class Logger {
       ///The length of data that has been written to bigBuf
       uint32_t bigBufLen;
     #endif
+
     //Section timer variables
     ///Timestamps of when sections of the current loop has been completed (μs)
     unsigned long loopTimings[maxLoopTimerSections];
     ///The next free index of loopTimings
     uint8_t timerIndex;
+
     //Buffer variables
     ///Buffer holding the data for one loop
     uint32_t buf[logBufferLen];
