@@ -11,8 +11,9 @@ const int maxLoopTime = 1000000/loopRate; //Maximum loop time (us)
 
 //Most of the settings are configured in settings.json
 
+//LED settings can be found in HardwareController.h
 //Log and SD card settings can be found in Logger.h
-//Max PIDs per MotorController object can be set in MotorController.h
+//Max PIDs per MotorController object and PWM type can be set in MotorController.h
 //Sensor settings can be found in SensorController.h
 /*** * * * SETTINGS * * * ***/
 

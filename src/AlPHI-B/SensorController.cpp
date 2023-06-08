@@ -292,9 +292,6 @@ int Sensor::init(Logger &logger) {
       for (int i=0; i<3; i++) {
         gyroOffset[i] = avgGyro[i]/3000.0f;
       }
-      gyroOffset[0] = -0.07602962;////TODO: make this able to be set in settings.json
-      gyroOffset[1] =  0.34954908;
-      gyroOffset[2] = -0.24275769;
     }
 
     return err;
@@ -312,11 +309,27 @@ int Sensor::init(Logger &logger) {
     controller.addAccelGyro(accelVal, gyroVal, weight);
   }
 #endif
+#ifdef SENSOR_LSM6DSOX
+  int S_LSM6DSOX::initSensor(Logger &logger) {
+    if (lsm.init(&SPI, 38)) {
+      return 0;
+    } else {
+      return 1;
+    }
+  }
+
+  void S_LSM6DSOX::getValue(SensorController &controller) {
+    lsm.getAccel(accelVal);
+    lsm.getGyro(gyroVal);
+
+    //Add value to the controller
+    controller.addAccelGyro(accelVal, gyroVal, weight);
+  }
+#endif
 #ifdef SENSOR_MPU6050
   int S_MPU6050::initSensor(Logger &logger) {
     Wire.begin();
     Wire.setClock(400000);
-
     
     pinMode(intPin, INPUT);
     digitalWrite(intPin, LOW);

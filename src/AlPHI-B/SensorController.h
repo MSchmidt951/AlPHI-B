@@ -4,7 +4,7 @@
 //Different types of sensors defined here, comment unused sensors to save program space
 //#define NO_ACCELGYRO
 #define SENSOR_ICM42688
-//#define SENSOR_LSM6DSOX
+#define SENSOR_LSM6DSOX
 #define SENSOR_MPU6050
 
 //#define SENSOR_ICP20100
@@ -17,12 +17,15 @@
 #include <memory>
 #include <SimpleKalmanFilter.h>
 
+#ifdef SENSOR_ICM42688
+  #include <DFRobot_ICM42688.h> //https://github.com/DFRobot/DFRobot_ICM42688
+#endif
+#ifdef SENSOR_LSM6DSOX
+  #include <Custom_LSM6DSOX.h>
+#endif
 #ifdef SENSOR_MPU6050
   #include <Wire.h>
   #include <MPU6050_kriswiner.h> //https://github.com/kriswiner/MPU6050
-#endif
-#ifdef SENSOR_ICM42688
-  #include <DFRobot_ICM42688.h> //https://github.com/DFRobot/DFRobot_ICM42688
 #endif
 
 //Import files
@@ -179,6 +182,24 @@ class SType_AccelGyro : public Sensor {
       DFRobot_ICM42688_SPI *ICM42688;
       ///Offset for the gyroscope to avoid value drift
       float gyroOffset[3];
+  };
+#endif
+
+#ifdef SENSOR_LSM6DSOX
+  /**
+   * @class LSM6DSOX
+   * @brief A class to use an LSM6DSOX accelerometer & gyroscope
+   */
+  class S_LSM6DSOX : public SType_AccelGyro {
+    using SType_AccelGyro::SType_AccelGyro;
+
+    protected:
+      int initSensor(Logger &logger);
+      void getValue(SensorController &controller);
+  
+    private:
+      ///Object for communicating with an LSM6DSOX
+      LSM6DSOX lsm;
   };
 #endif
 
