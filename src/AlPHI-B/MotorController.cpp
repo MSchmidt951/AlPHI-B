@@ -40,14 +40,19 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 
   //Arm ESCs
   while (millis() < 2500); //Wait for ESC startup
-  motorSignal = new Teensy_PWM*[motorCount];
+  #if PWM_TYPE == TEENSY
+    motorSignal = new Teensy_PWM*[motorCount];
+  #endif
   for (int i=0; i<motorCount; i++) {
-    motorSignal[i] = new Teensy_PWM(motors[i], signalFreq, armValues[i]);
-    if (motorSignal[i]) {
-      motorSignal[i]->setPWM();
-    } else {
-      return false;
-    }
+    #if PWM_TYPE == TEENSY
+      motorSignal[i] = new Teensy_PWM(motors[i], signalFreq, 0.0f);
+      if (motorSignal[i]) {
+        motorSignal[i]->setPWM();
+      } else {
+        return false;
+      }
+    #endif
+    writeToMotor(i, 1000.0f * armValues[i], true);
   }
 
   if (test) {
@@ -123,16 +128,36 @@ void MotorController::write() {
 
 void MotorController::writeZero() {
   if (name) {
-    for (int i=0; i<4; i++) {
-      writeToMotor(i, 0);
+    for (int i=0; i<motorCount; i++) {
+      writeToMotor(i, 1000.0f * armValues[i], true);
     }
   }
 }
 
-void MotorController::writeToMotor(int index, float value) {
-  value = max(0.0f, min(value, 1000.0f));
+void MotorController::stop() {
+  if (name) {
+    for (int i=0; i<motorCount; i++) {
+      #if PWM_TYPE == TEENSY
+        motorSignal[i]->setPWM(motors[i], signalFreq, 0.0f);
+      #elif PWM_TYPE == ANALOG
+        analogWrite(motors[i], 0);
+      #endif
+    }
+  }
+}
+
+void MotorController::writeToMotor(int index, float value, bool arm) {
+  if (!arm) {
+    value = max(0.0f, min(value, 1000.0f));
+  }
   value = map(value, 0.0f, 1000.0f, minDutyCycle, maxDutyCycle);
-  motorSignal[index]->setPWM(motors[index], signalFreq, value);
+  #if PWM_TYPE == TEENSY
+    motorSignal[index]->setPWM(motors[index], signalFreq, value);
+  #elif PWM_TYPE == ANALOG
+    analogWriteResolution(16);
+    analogWriteFrequency(signalFreq);
+    analogWrite(motors[index], int(value*0.255 + 0.5));
+  #endif
 }
 
 int MotorController::getPIDcount() {
@@ -174,9 +199,9 @@ void InputHandler::init(Logger &logger, MotorController* controller, const char*
     input = &xyzr[0];
   } else if (strcmp(inputStr, "left stick vert") == 0) {
     input = &xyzr[1];
-  } else if (strcmp(inputStr, "right stick horiz") == 0) {
-    input = &xyzr[2];
   } else if (strcmp(inputStr, "right stick vert") == 0) {
+    input = &xyzr[2];
+  } else if (strcmp(inputStr, "right stick horiz") == 0) {
     input = &xyzr[3];
   }
 }

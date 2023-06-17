@@ -3,8 +3,15 @@
 
 #define MAX_PIDS 6
 
+#define TEENSY 0
+#define ANALOG 1
+
+#define PWM_TYPE TEENSY
+
 //Import libraries
-#include <Teensy_PWM.h>
+#if PWM_TYPE == TEENSY
+  #include <Teensy_PWM.h>
+#endif
 
 //Import files
 #include "Logger.h"
@@ -60,8 +67,10 @@ class MotorController {
     void addMotorPower(int index, float amount);
     /** Calculates and writes the percentages to the motors */
     void write();
-    /** Turns off all motors */
+    /** Sets all motors to idle */
     void writeZero();
+    /** Turns off all motors */
+    void stop();
 
     /** Get the number of PID controllers attached to the controller
      *  
@@ -88,21 +97,24 @@ class MotorController {
      * 
      *  @param[in] index Index of the motor in the motors array
      *  @param[in] value Speed of motor, 0 - 1000
+     *  @param[in] arm Arming mode disables restrictions
      */
-    void writeToMotor(int index, float value);
+    void writeToMotor(int index, float value, bool arm=false);
 
     ///The number of motors the object has
     int motorCount = 0;
     ///Stores the pin numbers of the motors
     int* motors;
-    ///Holds the OneShot125 signal being sent to each motor
-    Teensy_PWM** motorSignal;
     ///Frequency (Hz) of the signal being sent
     float signalFreq;
-    ///Minimum duty cycle of the signal
+    ///Minimum duty cycle of the signal, 0 - 100
     float minDutyCycle;
-    ///Maximum duty cycle of the signal
+    ///Maximum duty cycle of the signal, 0 - 100
     float maxDutyCycle;
+    #if PWM_TYPE == TEENSY
+      ///Holds the signal being sent to each motor
+      Teensy_PWM** motorSignal;
+    #endif
 
     ///Percentage at which the motors are armed, usually 0 (or 0.5 for bi-directional motors)
     float* armValues;

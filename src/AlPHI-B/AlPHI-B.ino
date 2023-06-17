@@ -85,7 +85,8 @@ void ABORT(){ //This is also used to turn off all the motors after landing
   ESC.writeZero();
 
   logger.closeFile();
-  
+  ESC.stop();
+
   for (;;){
     ESC.writeZero();
     hw.buzz(400, 111);
