@@ -81,6 +81,7 @@ void standby() {
 }
 
 void ABORT(){ //This is also used to turn off all the motors after landing
+  hw.setRGB(RGB_MAX, RGB_MAX, RGB_MAX);
   ESC.writeZero();
 
   logger.closeFile();

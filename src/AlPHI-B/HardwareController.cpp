@@ -1,7 +1,16 @@
 #include "HardwareController.h"
 
+float AnalogInput::getValue() {
+  return ((analogRead(pin)/1024.0) * multiplier) + offset;
+}
+
 void HardwareController::initLED() {
-  FastLED.addLeds<WS2812, RGB_PIN>(RGB_LED, 1);
+  #if LED_LIB == FASTLED
+    FastLED.addLeds<WS2812, RGB_PIN>(RGB_LED, 1);
+  #elif LED_LIB == ADAFRUIT_NEOPIXEL
+    RGB_LED = new Adafruit_NeoPixel(1, RGB_PIN, NEO_GRB + NEO_KHZ800);
+    RGB_LED->begin();
+  #endif
   setRGB(RGB_MAX, RGB_MAX/4, 2);
 }
 
@@ -26,11 +35,27 @@ void HardwareController::init(Logger &logger) {
       logger.loadSetting("HardwareController", "Serial", logger.getIndexName("HardwareController", "Serial", i), "pins", serialPins[i], 2);
     }
   }
+
+  analogInputCount = logger.getArraySize("HardwareController", "Inputs");
+  if (analogInputCount) {
+    analogInputs = new AnalogInput[analogInputCount];
+    for (int i=0; i<analogInputCount; i++) {
+      analogInputs[i].name = logger.getIndexName("HardwareController", "Inputs", i);
+      logger.loadSetting("HardwareController", "Inputs", analogInputs[i].name, "pin", &analogInputs[i].pin);
+      logger.loadSetting("HardwareController", "Inputs", analogInputs[i].name, "multiplier", &analogInputs[i].multiplier);
+      logger.loadSetting("HardwareController", "Inputs", analogInputs[i].name, "offset", &analogInputs[i].offset);
+    }
+  }
 }
 
 void HardwareController::setRGB(int r, int g, int b) {
-  RGB_LED[0].setRGB(g, r, b);
-  FastLED.show();
+  #if LED_LIB == FASTLED
+    RGB_LED[0].setRGB(g, r, b);
+    FastLED.show();
+  #elif LED_LIB == ADAFRUIT_NEOPIXEL
+    RGB_LED->setPixelColor(0, RGB_LED->Color(r, g, b));
+    RGB_LED->show();
+  #endif
 }
 
 void HardwareController::blink(int d, int r, int g, int b) {
