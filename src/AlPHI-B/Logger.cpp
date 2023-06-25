@@ -1,9 +1,13 @@
 #include "Logger.h"
 #include "HardwareController.h"
 
-void Logger::init() {
+void Logger::init(SPIClass &spi, uint8_t cs) {
   #if STORAGE_TYPE == SD_CARD
-    checkSD(sd.begin(SdioConfig(FIFO_SDIO)));
+    #ifdef ARDUINO_GENERIC_H723ZETX
+      checkSD(sd.begin(SdSpiConfig(cs, DEDICATED_SPI, SD_SCK_MHZ(18), &spi)));
+    #else
+      checkSD(sd.begin(SdioConfig(FIFO_SDIO)));
+    #endif
     checkLog(0);
   
     sd.remove("log.bin");

@@ -1,8 +1,8 @@
 #include "Radio.h"
 
-void Radio::init() {
-  SPI1.begin();
-  radio.begin(&SPI1);
+void Radio::init(SPIClass &spi) {
+  //Setup radio
+  radio.begin(&spi);
   radio.setRadiation(RF24_PA_MAX, RF24_2MBPS);
   radio.setChannel(124);
   radio.setPayloadSize(7);

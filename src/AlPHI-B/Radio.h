@@ -18,7 +18,7 @@ extern void ABORT();
 class Radio {
   public:
     /** Initialise the radio. */
-    void init();
+    void init(SPIClass &spi);
     /** Recieves the input from the controller, if any was received. */
     void getInput();
     /** Checks the radio signal is being recieved at a fast enough rate.

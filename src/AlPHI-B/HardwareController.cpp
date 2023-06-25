@@ -23,7 +23,6 @@ void HardwareController::init(Logger &logger) {
   }
   CS1count = logger.getArraySize("HardwareController", "SPI1");
   if (CS1count > 0) {
-    SPI1.begin();
     logger.loadSetting("HardwareController", "SPI1", CS1pins, -1);
   }
 

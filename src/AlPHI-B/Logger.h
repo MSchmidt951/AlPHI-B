@@ -69,7 +69,7 @@ class Logger {
     /** Move/remove old logs, allocate space for the current log, read the settings file
      *  @brief Setup storage for logging
      */
-    void init();
+    void init(SPIClass &spi, uint8_t cs);
     /** Log setting (integer) to the current flight log
      *  
      *  @param[in] name Name of the setting

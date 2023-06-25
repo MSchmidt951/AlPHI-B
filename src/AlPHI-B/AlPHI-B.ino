@@ -43,6 +43,9 @@ MotorController ESC;
 Logger logger;
 HardwareController hw;
 
+//Pin vars
+SPIClass *SPIs[8];
+
 //Functions
 
 //Return the loop time in milliseconds
@@ -88,7 +91,6 @@ void ABORT(){ //This is also used to turn off all the motors after landing
   ESC.stop();
 
   for (;;){
-    ESC.writeZero();
     hw.buzz(400, 111);
     hw.blink(111, 255, 0, 0);
     hw.blink(1234, RGB_MAX, 0, 0);
@@ -100,8 +102,26 @@ void setup(){
   //Set up LED
   hw.initLED();
 
+  //Set up SPI
+  #ifdef ARDUINO_GENERIC_H723ZETX
+    SPIs[1] = new SPIClass(PD7, PG9, PG11);
+    SPIs[1]->begin();
+    SPIs[4] = new SPIClass(PE14, PE13, PE12);
+    SPIs[4]->begin();
+    SPIs[5] = new SPIClass(PF9, PF8, PF7);
+    SPIs[5]->begin();
+    SPIs[6] = new SPIClass(PA7, PA6, PA5);
+    SPIs[6]->begin();
+  #else
+    SPI1.begin();
+  #endif
+
   //Set up SD card
-  logger.init();
+  #ifdef ARDUINO_GENERIC_H723ZETX
+    logger.init(*SPIs[6], PA3);
+  #else
+    logger.init(*SPIs[0], 0);
+  #endif
 
   //Set up Hardware Controller
   hw.init(logger);
@@ -130,7 +150,11 @@ void setup(){
   logger.logString("\nTime (μs),Loop time (μs),Roll input,Pitch input,Vertical input,Yaw input,Pot,roll,pitch,yaw,FL,FR,BL,BR,PID roll,PID pitch,PID yaw,radio");
 
   //Set up communication
-  radio.init();
+  #ifdef ARDUINO_GENERIC_H723ZETX
+    radio.init(*SPIs[5]);
+  #else
+    radio.init(SPI1);
+  #endif
 
   //Startup lights
   delay(10);
