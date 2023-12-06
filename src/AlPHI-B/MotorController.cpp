@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "MotorController.h"
 #include "HardwareController.h"
+#include "pindef.h"
 
 int toInt(float f) {
   return int(f + .5);
@@ -21,6 +22,9 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
     defaultValues = new float[motorCount];
 
     loadSuccess &= logger->loadSetting(name, "pins", motors, motorCount);
+    if (loadSuccess) {
+      PINS.convert(motors, motorCount);
+    }
     loadSuccess &= logger->loadSetting(name, "signalFreq", &signalFreq);
     if (signalFreq > 0) {
       float signalLength[2];
@@ -57,7 +61,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 
   if (test) {
     hw.setRGB(0, 0, 15);
-    delay(2000);
+    delay(5000);
 
     //Test spin motors
     for (int i=0; i<4; i++) {
@@ -156,7 +160,7 @@ void MotorController::writeToMotor(int index, float value, bool arm) {
   #elif PWM_TYPE == ANALOG
     analogWriteResolution(16);
     analogWriteFrequency(signalFreq);
-    analogWrite(motors[index], int(value*0.255 + 0.5));
+    analogWrite(motors[index], int(value*655.36));
   #endif
 }
 
@@ -171,6 +175,7 @@ int MotorController::getMotorCount() {
 float MotorController::getMotorPower(int index) {
   return motorPower[index];
 }
+
 
 
 void InputHandler::init(Logger &logger, MotorController* controller, const char* parent, const char* name) {

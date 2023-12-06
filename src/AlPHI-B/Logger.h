@@ -10,7 +10,8 @@
 
 //Import libraries
 #if STORAGE_TYPE == SD_CARD
-  #include <SdFat.h>
+    #include <SPI.h>
+    #include <SdFat.h>
   #define ARDUINOJSON_ENABLE_COMMENTS 1
   #include <ArduinoJson.h>
 #elif STORAGE_TYPE == RAM
@@ -69,7 +70,7 @@ class Logger {
     /** Move/remove old logs, allocate space for the current log, read the settings file
      *  @brief Setup storage for logging
      */
-    void init(SPIClass &spi, uint8_t cs);
+    void init(SPIClass *spi, uint8_t cs);
     /** Log setting (integer) to the current flight log
      *  
      *  @param[in] name Name of the setting
@@ -138,7 +139,7 @@ class Logger {
      *  
      *  @param[in] t Timestamp to log
      */
-    void logTime(unsigned int t);
+    void logTime(unsigned long t);
     /** Write any data data in the buffer to the log */
     void write();
     /** Calculates how long a section of the main loop takes */

@@ -33,7 +33,7 @@ class Radio {
 
   private:
     ///Sets CE and CSN pins of the radio
-    RF24 radio{32, 33};
+    RF24 radio{PE6, PC14};
     ///Addresses of the controller and device
     byte addresses[2][6] = {"C", "D"};
     ///Raw input data

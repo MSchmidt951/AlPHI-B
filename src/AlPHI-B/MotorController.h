@@ -23,9 +23,6 @@ extern float potPercent;
 class InputHandler;
 
 
-/** Rounds a float to the nearest integer */
-int toInt(float f);
-
 /** 
  * @class MotorController
  * @brief Controls calculations for motor percentages and communicating with ESCs

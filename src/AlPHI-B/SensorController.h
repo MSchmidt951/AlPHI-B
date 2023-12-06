@@ -32,6 +32,7 @@
 #include "Logger.h"
 
 extern float loopTime();
+extern SPIClass *SPIs[8];
 
 class Sensor;
 
@@ -75,6 +76,7 @@ class SensorController {
      *  @param[in] name The name of the sensor
      *  @param[in] index Index of the sensor
      *  @param[in] logger Logger object to pass to the sensor
+     *  @returns error code. 0 for no error
      */
     int addSensor(const char* name, int index, Logger &logger);
     /** Calculates the current angle (in quaternions) using the accelerometer and gyroscope
@@ -127,21 +129,33 @@ class Sensor {
      *  @param[in] logger Logger object to read the settings from
      *  @returns Status of sensors. 0 for no error
      */
-    int init(Logger &logger);
+    int init(Logger &logger, const char* name);
     /** Gets the value from the sensor and adds it to the SensorController
      *  
      *  @param[in] controller SensorController to add the value to
      */
     virtual void getValue(SensorController &controller) = 0;
+    ///If the sensor is enabled
+    bool enabled;
 
   protected:
+    /** Gets the info about the sensor from the SD card
+     *  
+     *  @param[in] logger Logger object to read the settings from
+     *  @returns If the loading was successful
+     */
+    virtual bool getInfo(Logger &logger, const char* name) = 0;
     /** Initialise the sensor
      *  
      *  @param[in] logger Logger object used to load settings from
      */
-    virtual int initSensor(Logger &logger) = 0;
+    virtual int initSensor(Logger &logger, const char* name) = 0;
     ///Weight of the values from the sensor. A weight of 0.5 will affect the total sum of all the sensors half as much as a weight of 1
     float weight;
+    ///SPI channel used for the sensor
+    int SPIchannel;
+    ///CS pin for the sensor
+    int CSpin;
 };
 /**
  * @class SType_AccelGyro
@@ -151,6 +165,15 @@ class SType_AccelGyro : public Sensor {
   using Sensor::Sensor;
 
   protected:
+    bool getInfo(Logger &logger, const char* name);
+    /** Aligns the axes of the sensor with the board */
+    void alignAxes();
+    ///Sets the order of the axis to align with the board
+    int axisOrder[3];
+    ///Sets  direction each accelerometer axis
+    int accelDir[3];
+    ///Sets  direction each gyroscope axis
+    int gyroDir[3];
     ///Resolution of the accelerometer
     float aRes;
     ///Resolution of the accelerometer
@@ -174,7 +197,7 @@ class SType_AccelGyro : public Sensor {
     using SType_AccelGyro::SType_AccelGyro;
 
     protected:
-      int initSensor(Logger &logger);
+      int initSensor(Logger &logger, const char* name);
       void getValue(SensorController &controller);
   
     private:
@@ -194,7 +217,7 @@ class SType_AccelGyro : public Sensor {
     using SType_AccelGyro::SType_AccelGyro;
 
     protected:
-      int initSensor(Logger &logger);
+      int initSensor(Logger &logger, const char* name);
       void getValue(SensorController &controller);
   
     private:
@@ -212,7 +235,7 @@ class SType_AccelGyro : public Sensor {
     using SType_AccelGyro::SType_AccelGyro;
 
     protected:
-      int initSensor(Logger &logger);
+      int initSensor(Logger &logger, const char* name);
       void getValue(SensorController &controller);
   
     private:

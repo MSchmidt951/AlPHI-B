@@ -4,6 +4,7 @@
 #include "PIDcontroller.h"
 #include "Radio.h"
 #include "SensorController.h"
+#include "pindef.h"
 
 /*** * * * SETTINGS * * * ***/
 const int loopRate = 2000; //Maxiumum loop rate (Hz)
@@ -44,6 +45,7 @@ Logger logger;
 HardwareController hw;
 
 //Pin vars
+Pins PINS;
 SPIClass *SPIs[8];
 
 //Functions
@@ -97,7 +99,6 @@ void ABORT(){ //This is also used to turn off all the motors after landing
   }
 }
 
-
 void setup(){
   //Set up LED
   hw.initLED();
@@ -118,7 +119,7 @@ void setup(){
 
   //Set up SD card
   #ifdef ARDUINO_GENERIC_H723ZETX
-    logger.init(*SPIs[6], PA3);
+    logger.init(SPIs[6], PA3);
   #else
     logger.init(*SPIs[0], 0);
   #endif

@@ -1,5 +1,6 @@
 #include "SensorController.h"
 #include "HardwareController.h"
+#include "pindef.h"
 
 #ifdef NO_ACCELGYRO
   #include "Arduino.h"
@@ -11,17 +12,14 @@ int SensorController::init(Logger &logger) {
   hw.setRGB(0, RGB_MAX, RGB_MAX);
 
   //Add sensors
-  const char** sensorNames;
   int sensorAmount;
   int err;
 
   int sensorTypeCount = sizeof(sensorTypes)/sizeof(const char*);
   for (int i=0; i<sensorTypeCount; i++) {
     sensorAmount = logger.getArraySize("Sensors", sensorTypes[i]);
-    sensorNames = new const char*[sensorAmount];
-    logger.loadSetting("Sensors", sensorTypes[i], sensorNames, sensorAmount);
     for (int j=0; j<sensorAmount; j++) {
-      err = addSensor(sensorNames[j], sensorCount, logger);
+      err = addSensor(logger.getIndexName("Sensors", sensorTypes[i], j), sensorCount, logger);
       if (err) {
         return err;
       }
@@ -83,7 +81,9 @@ void SensorController::updateAngle() {
 
 void SensorController::getSensorData() {
   for (int i=0; i<sensorCount; i++) {
-    sensors[i]->getValue(*this);
+    if (sensors[i]->enabled) {
+      sensors[i]->getValue(*this);
+    }
   }
 
   //Calculate averages
@@ -142,13 +142,13 @@ int SensorController::addSensor(const char* name, int index, Logger &logger) {
       addedSensor = true;
     #endif
   } else {
-    return index * -100;
+    return (index+1) * -100;
   }
 
   if (addedSensor) {
-    return sensors[index]->init(logger);
+    return sensors[index]->init(logger, name);
   } else {
-    return index * -101;
+    return (index+1) * -101;
   }
 }
 
@@ -264,16 +264,49 @@ void SensorController::eulerToQuat(float roll, float pitch, float yaw) {
 }
 
 
-int Sensor::init(Logger &logger) {
+int Sensor::init(Logger &logger, const char* name) {
   weight = 1;
 
-  return initSensor(logger);
+  if (getInfo(logger, name)) {
+    return initSensor(logger, name);
+  } else {
+    return -999;
+  }
 }
 
 
+bool SType_AccelGyro::getInfo(Logger &logger, const char* name) {
+  bool loadSuccess = true;
+
+  int enabledInt;
+  loadSuccess &= logger.loadSetting("Sensors", "accelGyro", name, "enabled", &enabledInt);
+  enabled = enabledInt > 0;
+  loadSuccess &= logger.loadSetting("Sensors", "accelGyro", name, "SPI", &SPIchannel);
+  loadSuccess &= logger.loadSetting("Sensors", "accelGyro", name, "CS", &CSpin);
+  CSpin = PINS[CSpin];
+  loadSuccess &= logger.loadSetting("Sensors", "accelGyro", name, "axisOrder", axisOrder, 3);
+  loadSuccess &= logger.loadSetting("Sensors", "accelGyro", name, "accelDirection", accelDir, 3);
+  loadSuccess &= logger.loadSetting("Sensors", "accelGyro", name, "gyroDirection", gyroDir, 3);
+
+  return loadSuccess;
+}
+
+void SType_AccelGyro::alignAxes() {
+  float tmpAccelVal[3];
+  float tmpGyroVal[3];
+  for (int i=0; i<3; i++) {
+    tmpAccelVal[i] = accelVal[i];
+    tmpGyroVal[i] = gyroVal[i];
+  }
+  for (int i=0; i<3; i++) {
+    accelVal[i] = tmpAccelVal[axisOrder[i]] * accelDir[i];
+    gyroVal[i] = tmpGyroVal[axisOrder[i]] * gyroDir[i];
+  }
+}
+
 #ifdef SENSOR_ICM42688
-  int S_ICM42688::initSensor(Logger &logger) {
-    ICM42688 = new DFRobot_ICM42688_SPI(20);
+  int S_ICM42688::initSensor(Logger &logger, const char* name) {
+    ICM42688 = new DFRobot_ICM42688_SPI(CSpin, SPIs[SPIchannel]);
     int err = ICM42688->begin();
 
     if (err == 0) {
@@ -282,10 +315,13 @@ int Sensor::init(Logger &logger) {
       ICM42688->startGyroMeasure(LN_MODE);
       ICM42688->startAccelMeasure(LN_MODE);
 
+      ICM42688->getGyroDataX();
+      ICM42688->getGyroDataY();
+      ICM42688->getGyroDataZ();
       float avgGyro[3] = {0, 0, 0};
       for (int i=0; i<3000; i++) {
-        avgGyro[0] += ICM42688->getGyroDataY();
-        avgGyro[1] += ICM42688->getGyroDataX();
+        avgGyro[0] += ICM42688->getGyroDataX();
+        avgGyro[1] += ICM42688->getGyroDataY();
         avgGyro[2] += ICM42688->getGyroDataZ();
         delay(1);
       }
@@ -298,20 +334,22 @@ int Sensor::init(Logger &logger) {
   }
 
   void S_ICM42688::getValue(SensorController &controller) {
-    accelVal[0] = ICM42688->getAccelDataY()/1000.0f;
-    accelVal[1] = ICM42688->getAccelDataX()/1000.0f;
+    accelVal[0] = ICM42688->getAccelDataX()/1000.0f;
+    accelVal[1] = ICM42688->getAccelDataY()/1000.0f;
     accelVal[2] = ICM42688->getAccelDataZ()/1000.0f;
-    gyroVal[0] = ICM42688->getGyroDataY() - gyroOffset[0];
-    gyroVal[1] = ICM42688->getGyroDataX() - gyroOffset[1];
+    gyroVal[0] = ICM42688->getGyroDataX() - gyroOffset[0];
+    gyroVal[1] = ICM42688->getGyroDataY() - gyroOffset[1];
     gyroVal[2] = ICM42688->getGyroDataZ() - gyroOffset[2];
+
+    alignAxes();
 
     //Add value to the controller
     controller.addAccelGyro(accelVal, gyroVal, weight);
   }
 #endif
 #ifdef SENSOR_LSM6DSOX
-  int S_LSM6DSOX::initSensor(Logger &logger) {
-    if (lsm.init(&SPI, 38)) {
+  int S_LSM6DSOX::initSensor(Logger &logger, const char* name) {
+    if (lsm.init(SPIs[SPIchannel], CSpin)) {
       return 0;
     } else {
       return 1;
@@ -322,12 +360,14 @@ int Sensor::init(Logger &logger) {
     lsm.getAccel(accelVal);
     lsm.getGyro(gyroVal);
 
+    alignAxes();
+
     //Add value to the controller
     controller.addAccelGyro(accelVal, gyroVal, weight);
   }
 #endif
 #ifdef SENSOR_MPU6050
-  int S_MPU6050::initSensor(Logger &logger) {
+  int S_MPU6050::initSensor(Logger &logger, const char* name) {
     Wire.begin();
     Wire.setClock(400000);
     
@@ -358,6 +398,8 @@ int Sensor::init(Logger &logger) {
         gyroVal[i] = (float)gyroData[i]*gRes;
       }
     }
+
+    alignAxes();
 
     //Add value to the controller
     controller.addAccelGyro(accelVal, gyroVal, weight);

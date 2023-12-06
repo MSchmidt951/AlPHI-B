@@ -1,7 +1,7 @@
 #ifndef __HardwareController_H__
 #define __HardwareController_H__
 
-#define RGB_PIN 23
+#define RGB_PIN PB12
 #define RGB_MAX 80
 
 #define FASTLED 0
