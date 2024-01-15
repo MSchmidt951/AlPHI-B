@@ -3,11 +3,6 @@
 #include "HardwareController.h"
 #include "pindef.h"
 
-int toInt(float f) {
-  return int(f + .5);
-}
-
-
 bool MotorController::init(Logger &l, const char* motorName, bool test) {
   logger = &l;
   name = motorName;
@@ -55,7 +50,10 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
     motorSignal = new Teensy_PWM*[motorCount];
   #endif
   for (int i=0; i<motorCount; i++) {
-    #if PWM_TYPE == TEENSY
+    #if PWM_TYPE == ANALOG
+      pinMode(motors[i], OUTPUT);
+      digitalWrite(motors[i], LOW);
+    #elif PWM_TYPE == TEENSY
       motorSignal[i] = new Teensy_PWM(motors[i], signalFreq, 0.0f);
       if (motorSignal[i]) {
         motorSignal[i]->setPWM();
@@ -72,7 +70,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
     delay(5000);
 
     //Test spin motors
-    for (int i=0; i<4; i++) {
+    for (int i=0; i<motorCount; i++) {
       delay(100);
       hw.setRGB(0, 0, RGB_MAX);
       writeToMotor(i, 100);
@@ -164,13 +162,13 @@ void MotorController::writeToMotor(int index, float value, bool arm) {
   if (!arm) {
     value = max(0.0f, min(value, 1000.0f));
   }
-  value = map(value, 0.0f, 1000.0f, minDutyCycle, maxDutyCycle);
+  value = mapf(value, 0.0f, 1000.0f, minDutyCycle, maxDutyCycle);
   #if PWM_TYPE == TEENSY
     motorSignal[index]->setPWM(motors[index], signalFreq, value);
   #elif PWM_TYPE == ANALOG
     analogWriteResolution(16);
     analogWriteFrequency(signalFreq);
-    analogWrite(motors[index], int(value*655.36));
+    analogWrite(motors[index], uint32_t(value*655.36));
   #endif
 }
 
@@ -226,9 +224,9 @@ void InputHandler::processInput(MotorController* controller) {
   if (*input == .5f) {
     output = midControl;
   } else if (*input < .5f) {
-    output = map(*input, .0f, .5f, minControl, midControl);
+    output = mapf(*input, .0f, .5f, minControl, midControl);
   } else {
-    output = map(*input, .5f, 1.0f, midControl, maxControl);
+    output = mapf(*input, .5f, 1.0f, midControl, maxControl);
   }
 
   if (outputPinCount > 0) {

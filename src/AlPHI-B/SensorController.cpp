@@ -49,7 +49,7 @@ int SensorController::init(Logger &l) {
 
     delayMicroseconds(10);
   }
-  //Get the average from the ten readings
+  //Get the average from the readings
   currentAngle[0] /= float(readings);
   currentAngle[1] /= float(readings);
   //Set the quaternion to the current angle

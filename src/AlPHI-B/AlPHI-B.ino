@@ -50,6 +50,11 @@ SPIClass *SPIs[8];
 
 //Functions
 
+//Map function that works with floats
+float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 //Return the loop time in milliseconds
 float loopTime(){
   return (loopTimestamp - lastLoopTimestamp) / 1000.0;
@@ -106,17 +111,25 @@ void setup(){
 
   //Set up SPI
   #ifdef ARDUINO_GENERIC_H723ZETX
-    SPIs[1] = new SPIClass(PD7, PG9, PG11);
-    SPIs[1]->begin();
-    SPIs[4] = new SPIClass(PE14, PE13, PE12);
-    SPIs[4]->begin();
-    SPIs[5] = new SPIClass(PF9, PF8, PF7);
-    SPIs[5]->begin();
-    SPIs[6] = new SPIClass(PA7, PA6, PA5);
-    SPIs[6]->begin();
+    //static SPIClass tmpSPI1(PD7, PG9, PG11);
+    //tmpSPI1.begin();
+    //SPIs[1] = &tmpSPI1;
+
+    static SPIClass tmpSPI4(PE14, PE13, PE12);
+    tmpSPI4.begin();
+    SPIs[4] = &tmpSPI4;
+
+    static SPIClass tmpSPI5(PF9, PF8, PF7);
+    tmpSPI5.begin();
+    SPIs[5] = &tmpSPI5;
+
+    static SPIClass tmpSPI6(PA7, PA6, PA5);
+    tmpSPI6.begin();
+    SPIs[6] = &tmpSPI6;
   #else
     SPI1.begin();
   #endif
+  hw.setRGB(10, 2, 2);
 
   //Set up SD card
   #ifdef ARDUINO_GENERIC_H723ZETX

@@ -47,6 +47,7 @@ void HardwareController::init(Logger &logger) {
       logger.loadSetting("HardwareController", "Inputs", analogInputs[i].name, "offset", &analogInputs[i].offset);
     }
   }
+  setRGB(RGB_MAX, RGB_MAX, 0);
 }
 
 void HardwareController::setRGB(int r, int g, int b) {

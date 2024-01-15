@@ -249,4 +249,5 @@ class SType_AccelGyro : public Sensor {
   };
 #endif
 
+extern SensorController sensors;
 #endif

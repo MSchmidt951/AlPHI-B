@@ -6,7 +6,7 @@
 #define TEENSY 0
 #define ANALOG 1
 
-#define PWM_TYPE TEENSY
+#define PWM_TYPE ANALOG
 
 //Import libraries
 #if PWM_TYPE == TEENSY
@@ -16,6 +16,8 @@
 //Import files
 #include "Logger.h"
 #include "PIDcontroller.h"
+
+extern float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 
 extern float xyzr[4];
 extern float potPercent;

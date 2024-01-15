@@ -8,7 +8,7 @@ void Logger::init(SPIClass *spi, uint8_t cs) {
     #else
       checkSD(sd.begin(SdioConfig(FIFO_SDIO)));
     #endif
-    hw.setRGB(50, 0, 50);
+    hw.setRGB(RGB_MAX, 0, RGB_MAX/8);
     sd.remove("debug.txt");
     debug("--- STARTING SD SETUP ---");
     debug("Checking previous logs");
@@ -31,6 +31,7 @@ void Logger::init(SPIClass *spi, uint8_t cs) {
   #elif STORAGE_TYPE == RAM
     Serial.begin(115200);
   #endif
+  hw.setRGB(RGB_MAX, 0, RGB_MAX);
 }
 
 void Logger::checkSD(bool condition) {

@@ -47,4 +47,6 @@ class Radio {
     ///Time since the last radio signal (μs)
     unsigned long lastRadioTime = 0;
 };
+
+extern Radio radio;
 #endif
