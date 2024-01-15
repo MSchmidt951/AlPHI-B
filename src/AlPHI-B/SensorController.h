@@ -116,6 +116,9 @@ class SensorController {
     int sensorCount = 0;
     ///Vector containing all active sensors
     std::vector<std::unique_ptr<Sensor>> sensors;
+
+    ///A reference to the logger
+    Logger* logger;
 };
 
 /**

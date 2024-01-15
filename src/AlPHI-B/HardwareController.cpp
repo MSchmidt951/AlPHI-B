@@ -15,6 +15,8 @@ void HardwareController::initLED() {
 }
 
 void HardwareController::init(Logger &logger) {
+  logger.debug("--- STARTING HARDWARECONTROLLER SETUP ---");
+
   logger.loadSetting("HardwareController", "buzzerPin", &buzzerPin);
 
   CScount = logger.getArraySize("HardwareController", "SPI0");

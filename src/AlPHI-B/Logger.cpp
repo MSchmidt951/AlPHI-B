@@ -9,13 +9,18 @@ void Logger::init(SPIClass *spi, uint8_t cs) {
       checkSD(sd.begin(SdioConfig(FIFO_SDIO)));
     #endif
     hw.setRGB(50, 0, 50);
+    sd.remove("debug.txt");
+    debug("--- STARTING SD SETUP ---");
+    debug("Checking previous logs");
     checkLog(0);
-  
+
+    debug("Allocating space for the binary log file");
     sd.remove("log.bin");
     logFileBin.open("log.bin", O_WRITE | O_CREAT | O_TRUNC);
     checkSD(logFileBin.preAllocate(logFileSize));
   
     //Get settings file
+    debug("Getting settings");
     checkSD(sd.exists("settings.json"));
     FsFile settingsFile;
     settingsFile.open("settings.json");
@@ -50,6 +55,32 @@ void Logger::checkLog(int fileNum) {
       logFile.open(fileName, O_WRITE);
       logFile.rename(nextFile);
       logFile.close();
+    }
+  #endif
+}
+
+void Logger::debug(String s, bool timestamp) {
+  #if STORAGE_TYPE == SD_CARD
+    if (!debugOpen) {
+      debugFile.open("debug.txt", O_CREAT | O_WRITE | O_APPEND);
+      debugFile.print("\n\n");
+      debugOpen = true;
+    }
+    if (timestamp) {
+      debugFile.print("\n" + String(millis()) + "\t" + s);
+    } else {
+      debugFile.print(s);
+    }
+    debugFile.flush();
+  #endif
+}
+
+void Logger::closeDebug() {
+  #if STORAGE_TYPE == SD_CARD
+    if (debugOpen) {
+      debug("Closing debug file");
+      debugFile.close();
+      debugOpen = false;
     }
   #endif
 }

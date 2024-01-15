@@ -89,6 +89,7 @@ void ABORT(){ //This is also used to turn off all the motors after landing
   hw.setRGB(RGB_MAX, RGB_MAX, RGB_MAX);
   ESC.writeZero();
 
+  logger.closeDebug();
   logger.closeFile();
   ESC.stop();
 
@@ -151,11 +152,15 @@ void setup(){
   logger.logString("\nTime (μs),Loop time (μs),Roll input,Pitch input,Vertical input,Yaw input,Pot,roll,pitch,yaw,FL,FR,BL,BR,PID roll,PID pitch,PID yaw,radio");
 
   //Set up communication
+  logger.debug("--- STARTING RADIO SETUP ---");
   #ifdef ARDUINO_GENERIC_H723ZETX
     radio.init(*SPIs[5]);
   #else
     radio.init(SPI1);
   #endif
+
+  //Finish boot debug
+  logger.closeDebug();
 
   //Startup lights
   delay(10);
@@ -188,7 +193,6 @@ void loop(){
   } else {
     //Check radio signal
     radio.checkSignal(loopTimeMicro(), loopTimestamp);
-
 
     /* Get current angle */
     sensors.updateAngle();

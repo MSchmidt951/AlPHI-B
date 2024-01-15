@@ -6,9 +6,12 @@
   #include "Arduino.h"
 #endif
 
-int SensorController::init(Logger &logger) {
+int SensorController::init(Logger &l) {
+  logger = &l;
+  logger->debug("--- STARTING SENSOR SETUP ---");
+
   //Load settings from the SD card
-  logger.loadSetting("Sensors", "angleOffset", angleOffset, 3);
+  logger->loadSetting("Sensors", "angleOffset", angleOffset, 3);
   hw.setRGB(0, RGB_MAX, RGB_MAX);
 
   //Add sensors
@@ -17,10 +20,14 @@ int SensorController::init(Logger &logger) {
 
   int sensorTypeCount = sizeof(sensorTypes)/sizeof(const char*);
   for (int i=0; i<sensorTypeCount; i++) {
-    sensorAmount = logger.getArraySize("Sensors", sensorTypes[i]);
+    logger->debug("Getting sensor group " + String(sensorTypes[i]));
+    sensorAmount = logger->getArraySize("Sensors", sensorTypes[i]);
     for (int j=0; j<sensorAmount; j++) {
-      err = addSensor(logger.getIndexName("Sensors", sensorTypes[i], j), sensorCount, logger);
+      logger->debug("Init " + String(logger->getIndexName("Sensors", sensorTypes[i], j)));
+      err = addSensor(logger->getIndexName("Sensors", sensorTypes[i], j), sensorCount, l);
+      logger->debug(", done", false);
       if (err) {
+        logger->debug("  ERROR: " + String(err), false);
         return err;
       }
       sensorCount++;
@@ -28,6 +35,7 @@ int SensorController::init(Logger &logger) {
   }
 
   //Take some readings
+  logger->debug("Taking some readings");
   int readings = 1000;
   for (int i=0; i<readings; i++) {
     getSensorData();
@@ -267,7 +275,9 @@ void SensorController::eulerToQuat(float roll, float pitch, float yaw) {
 int Sensor::init(Logger &logger, const char* name) {
   weight = 1;
 
+  logger.debug(", getting info", false);
   if (getInfo(logger, name)) {
+    logger.debug(", init start", false);
     return initSensor(logger, name);
   } else {
     return -999;

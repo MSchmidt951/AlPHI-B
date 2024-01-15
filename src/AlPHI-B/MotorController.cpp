@@ -12,6 +12,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   logger = &l;
   name = motorName;
 
+  logger->debug("--- STARTING MOTORCONTROLLER SETUP (" + String(motorName) + ") ---");
   //Load settings from the SD card
   motorCount = logger->getArraySize(name, "pins");
   bool loadSuccess = motorCount != -1;
@@ -24,6 +25,8 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
     loadSuccess &= logger->loadSetting(name, "pins", motors, motorCount);
     if (loadSuccess) {
       PINS.convert(motors, motorCount);
+    } else {
+      logger->debug("ERROR: could not load pin numbers");
     }
     loadSuccess &= logger->loadSetting(name, "signalFreq", &signalFreq);
     if (signalFreq > 0) {
@@ -35,8 +38,11 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
     loadSuccess &= logger->loadSetting(name, "armValues", armValues, motorCount);
 
     loadSuccess &= logger->loadSetting(name, "defaultValues", defaultValues, motorCount);
+  } else {
+    logger->debug("ERROR: motor count cannot be found");
   }
   if (!loadSuccess) {
+    logger->debug("ERROR: load unsuccessful");
     return false;
   }
 
@@ -44,6 +50,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 
   //Arm ESCs
   while (millis() < 2500); //Wait for ESC startup
+  logger->debug("Arming ESCs");
   #if PWM_TYPE == TEENSY
     motorSignal = new Teensy_PWM*[motorCount];
   #endif
@@ -60,6 +67,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   }
 
   if (test) {
+    logger->debug("Testing motors");
     hw.setRGB(0, 0, 15);
     delay(5000);
 
@@ -82,6 +90,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 }
 
 void MotorController::setupInputs() {
+  logger->debug("Setting up inputs");
   inputCount = logger->getArraySize(name, "Controls");
   inputs = new InputHandler[inputCount];
   for (int i=0; i<inputCount; i++) {
@@ -90,6 +99,7 @@ void MotorController::setupInputs() {
 }
 
 void MotorController::addPID(const char* PIDName, float* target, float* current, float* currentDiff) {
+  logger->debug("Loading PID " + String(PIDName));
   if (PIDcount < MAX_PIDS) {
     PIDs[PIDcount].init(*logger, name, PIDName, target, current, currentDiff);
     PIDcount++;

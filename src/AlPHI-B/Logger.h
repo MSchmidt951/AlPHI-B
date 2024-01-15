@@ -71,6 +71,14 @@ class Logger {
      *  @brief Setup storage for logging
      */
     void init(SPIClass *spi, uint8_t cs);
+    /** Write to the debug file
+     *  
+     *  @param[in] s String to log
+     *  @param[in] timestamp enables/disables writing with a timestamp
+     */
+    void debug(String s, bool timestamp=true);
+    /** Closes the debug file */
+    void closeDebug();
     /** Log setting (integer) to the current flight log
      *  
      *  @param[in] name Name of the setting
@@ -293,6 +301,10 @@ class Logger {
       FsFile logFileBin;
       ///JSON document holding all the settings
       StaticJsonDocument<4096> sdSettings;
+      ///Debug file object
+      FsFile debugFile;
+      ///Stores debuf file state
+      bool debugOpen = false;
     #elif STORAGE_TYPE == RAM
       ///Buffer that holds all of the data in RAM mode
       uint32_t bigBuf[2100*36/4];
