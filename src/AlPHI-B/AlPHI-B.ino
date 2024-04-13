@@ -29,12 +29,6 @@ unsigned long standbyOffset = 0;
 bool standbyLights = true;
 unsigned long lightChangeTime = 0;
 
-//Input vars
-float xyzr[4] = {0.5, 0.5, 0.5, 0.5}; //Joystick inputs for x, y, z and rotation(yaw) (from 0 to 1)
-float potPercent = 0; //Percentage of the controllers potentiometer, used as a trim
-bool light = false;
-bool standbyButton = false;
-
 //Sensor vars
 SensorController sensors;
 
@@ -57,7 +51,7 @@ float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
 
 //Return the loop time in milliseconds
 float loopTime(){
-  return (loopTimestamp - lastLoopTimestamp) / 1000.0;
+  return float(loopTimestamp - lastLoopTimestamp) / 1000.0f;
 }
 //Return the loop time in microseconds
 unsigned long loopTimeMicro(){
@@ -185,7 +179,7 @@ void setup(){
   //Start the clock
   startTime = micros();
   loopTimestamp = startTime;
-  lastLoopTimestamp = startTime;
+  lastLoopTimestamp = startTime-maxLoopTime;
 }
 
 
@@ -194,9 +188,9 @@ void loop(){
   radio.getInput();
 
   //Check standby status
-  if (standbyButton and standbyStatus == 0) {
+  if (radio.inputs.standbyButton and standbyStatus == 0) {
     standbyStatus = 1;
-  } else if (!standbyButton and standbyStatus == 2) {
+  } else if (!radio.inputs.standbyButton and standbyStatus == 2) {
     standbyOffset += micros() - standbyStartTime;
     standbyStatus = 0;
   }
@@ -228,9 +222,9 @@ void loop(){
     if (logger.checkLogReady()) {
       logger.logTime(micros()-startTime-standbyOffset); //Time & loop time
       for (int i=0; i<4; i++) {
-        logger.logData((uint8_t)(xyzr[i]*255), typeID.uint8); //Joystick
+        logger.logData((uint8_t)(radio.inputs.xyzr[i]*255), typeID.uint8); //Joystick
       }
-      logger.logData((uint8_t)(potPercent*255), typeID.uint8); //Potentiometer
+      logger.logData((uint8_t)(radio.inputs.potPercent*255), typeID.uint8); //Potentiometer
       for (int i=0; i<2; i++) {
         logger.logData(sensors.currentAngle[i], typeID.float32); //Roll and pitch
       }
