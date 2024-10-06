@@ -39,7 +39,7 @@ int SensorController::init() {
     for (int j=0; j<sensorAmount; j++) {
       name = logger.getIndexName("Sensors", sensorTypes[i], j);
       logger.debug("Init " + String(name));
-      err = addSensor(name, sensorCount, l);
+      err = addSensor(name, sensorCount);
       logger.debug(", done", false);
       if (err) {
         logger.debug("  ERROR: " + String(err), false);
