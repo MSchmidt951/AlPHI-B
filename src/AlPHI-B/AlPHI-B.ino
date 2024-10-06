@@ -202,7 +202,7 @@ void loop(){
     radio.checkSignal(loopTimeMicro(), loopTimestamp);
 
     /* Get current angle */
-    sensors.updateAngle();
+    sensors.updateSensors();
 
     //Get loop time
     lastLoopTimestamp = loopTimestamp;

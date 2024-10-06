@@ -50,6 +50,7 @@ int SensorController::init() {
   }
 
   //Take some readings
+  //TODO: Get initial altitude
   logger.debug("Taking some readings");
   int readings = 50;
   float tmpAccelVal[3] = {0, 0, 0};
@@ -83,7 +84,7 @@ int SensorController::init() {
   return 0;
 }
 
-void SensorController::updateAngle() {
+void SensorController::updateSensors() {
   getSensorData();
 
   //Update quaternion values
@@ -103,6 +104,9 @@ void SensorController::updateAngle() {
   for (int i=0; i<3; i++) {
     rRate[i] = gyroVal[i];
   }
+
+  //Get altitude
+  altitude = (log(baroPressure/101325.0f) * 0.289644 * baroTemp) / (-g * 0.289644f);
 }
 
 void SensorController::getSensorData() {
@@ -112,6 +116,9 @@ void SensorController::getSensorData() {
     accelVal[i] = 0;
     gyroVal[i] = 0;
   }
+  baroWeight = 0;
+  baroPressure = 0;
+  baroTemp = 0;
 
   //Get the sensor data
   for (int i=0; i<sensorCount; i++) {
@@ -125,6 +132,16 @@ void SensorController::getSensorData() {
     accelVal[i] /= accelGyroWeight;
     gyroVal[i] /= accelGyroWeight;
   }
+  baroPressure /= baroWeight;
+  baroTemp /= baroWeight;
+}
+
+float SensorController::getAltitude(bool relative) {
+    if (relative) {
+        return altitude - initialAltitude;
+    } else {
+        return altitude;
+    }
 }
 
 void SensorController::addAccelGyro(float* accel, float* gyro, float weight) {

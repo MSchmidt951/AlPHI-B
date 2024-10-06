@@ -49,7 +49,7 @@ class SensorController {
      */
     int init();
     /** Reads the sensors and updates the state of the device */
-    void updateAngle();
+    void updateSensors();
     /** Add accelerometer and gyroscope data. Called by Sensor objects
      *  
      *  @param[in] accel Array of accelerometer data in three axes. Units in Gs
@@ -57,6 +57,13 @@ class SensorController {
      *  @param[in] weight The weight of the data, usually set to 1
      */
     void addAccelGyro(float* accel, float* gyro, float weight);
+
+    /** Get the altitude above mean sea level or above start
+     *
+     * @param[in] relative return absolute relative altitude
+     * @returns altitude in metres
+     */
+    float getAltitude(bool relative = true);
 
     /** Gets the proper alignment and order of axes for the accelerometer
      *  
@@ -108,12 +115,26 @@ class SensorController {
     float accelVal[3];
     ///Gyroscope value in degrees per seconds {roll, pitch, yaw}
     float gyroVal[3];
-    ///The sum of all the weightings from each induvidual accelerometer+gyroscope sensor
+    ///The sum of all the weightings from each accelerometer+gyroscope sensor
     float accelGyroWeight = 0;
     ///Kalman filter for the roll axis
     SimpleKalmanFilter rollKalman{.5, 1, 0.5};
     ///Kalman filter for the pitch axis
     SimpleKalmanFilter pitchKalman{.5, 1, 0.5};
+
+    ///Barometer pressure
+    float baroPressure = 0;
+    ///Barometer temperature
+    float baroTemp = 0;
+    ///The sum of all the weightings from each barometer
+    float baroWeight = 0;
+    ///Altitude of the device
+    float altitude = 0;
+    ///Initial altitude of the device
+    float initialAltitude = 0;
+    ///Gravitational constant used for altitude calculation
+    const float g = 9.81;
+
 
     ///Array containing supported sensor types
     const char* sensorTypes[3] = {"accelGyro", "baro", "mag"};
@@ -163,6 +184,7 @@ class Sensor {
     ///CS pin for the sensor
     int CSpin;
 };
+
 /**
  * @class SType_AccelGyro
  * @brief Virtual class for a sensor with both an accelerometer and gyroscope
@@ -251,6 +273,32 @@ class SType_AccelGyro : public Sensor {
       int intPin = 39;
   };
 #endif
+
+/**
+ * @class SType_Baro
+ * @brief Virtual class for a barometer
+ */
+class SType_Baro : public Sensor {
+    using Sensor::Sensor;
+
+    protected:
+        ///Barometer pressure reading (Pa)
+        float pressure;
+        ///Barometer temperature (K)
+        float temp;
+};
+
+/**
+ * @class SType_Mag
+ * @brief Virtual class for a three axis magnetometer
+ */
+class SType_Mag : public Sensor {
+    using Sensor::Sensor;
+
+    protected:
+        ///The magnetic field readings
+        float magField[3];
+};
 
 extern SensorController sensors;
 #endif
