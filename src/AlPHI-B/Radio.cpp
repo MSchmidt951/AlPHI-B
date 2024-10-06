@@ -36,16 +36,29 @@ void Radio::getInput() {
     
     //Get analog info from packet
     for (int i=0; i<4; i++) {
-      xyzr[i] = data[i]/255.0;
-      if (abs(xyzr[i] - 0.5) < 0.04) { //Joystick deadzone
-       xyzr[i] = 0.5;
+      inputs.xyzr[i] = data[i]/255.0;
+      if (abs(inputs.xyzr[i] - 0.5) < 0.04) { //Joystick deadzone
+       inputs.xyzr[i] = 0.5;
       }
     }
-    potPercent = data[4]/255.0; //Put between 0-1
+    inputs.potPercent = data[4]/255.0; //Put between 0-1
     //Get binary info from packet
-    light = bitRead(data[6], 2);
-
-    standbyButton = bitRead(data[6], 1);
+    for (int i=0; i<4; i++) {
+      inputs.dirBtn[i] = bitRead(data[5], i);
+    }
+    for (int i=0; i<2; i++) {
+      inputs.buttons[i] = bitRead(data[5], i+4);
+    }
+    for (int i=0; i<2; i++) {
+      inputs.triggers[i] = bitRead(data[5], i+6);
+    }
+    inputs.standbyButton = bitRead(data[6], 1);
+    inputs.light = bitRead(data[6], 2);
+    for (int i=0; i<3; i++) {
+      inputs.switches[i] = bitRead(data[6], i+3);
+    }
+    inputs.stickBtnL = bitRead(data[6], 6);
+    inputs.stickBtnR = bitRead(data[6], 7);
   }
 }
 

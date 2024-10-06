@@ -19,9 +19,6 @@
 
 extern float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 
-extern float xyzr[4];
-extern float potPercent;
-
 class InputHandler;
 
 

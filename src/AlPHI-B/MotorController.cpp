@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "MotorController.h"
 #include "HardwareController.h"
+#include "Radio.h"
 #include "pindef.h"
 
 bool MotorController::init(const char* motorName, bool test) {
@@ -48,7 +49,7 @@ bool MotorController::init(const char* motorName, bool test) {
 
   //Arm ESCs
   while (millis() < 2500); //Wait for ESC startup
-  logger.debug("Arming ESCs");
+  logger.debug("Arming "+ String(motorCount) +" motors at "+ String(int(signalFreq)) +"Hz");
   #if PWM_TYPE == TEENSY
     motorSignal = new Teensy_PWM*[motorCount];
   #endif
@@ -76,7 +77,7 @@ bool MotorController::init(const char* motorName, bool test) {
     for (int i=0; i<motorCount; i++) {
       delay(100);
       hw.setRGB(0, 0, RGB_MAX);
-      writeToMotor(i, 100);
+      writeToMotor(i, 150);
       delay(500);
       writeToMotor(i, 0);
       hw.setRGB(0, 0, 0);
@@ -178,7 +179,7 @@ void MotorController::writeToMotor(int index, float value, bool arm) {
   #elif PWM_TYPE == ANALOG
     analogWriteResolution(16);
     analogWriteFrequency(signalFreq);
-    analogWrite(motors[index], uint32_t(value*655.36));
+    analogWrite(motors[index], uint32_t(value*655.35));
   #endif
 }
 
@@ -217,15 +218,15 @@ void InputHandler::init(MotorController* controller, const char* parent, const c
   const char* inputStr;
   logger.loadSetting(parent, "Controls", name, "input", &inputStr);
   if (strcmp(inputStr, "potentiometer") == 0) {
-    input = &potPercent;
+    input = &radio.inputs.potPercent;
   } else if (strcmp(inputStr, "left stick horiz") == 0) {
-    input = &xyzr[0];
+    input = &radio.inputs.xyzr[0];
   } else if (strcmp(inputStr, "left stick vert") == 0) {
-    input = &xyzr[1];
+    input = &radio.inputs.xyzr[1];
   } else if (strcmp(inputStr, "right stick vert") == 0) {
-    input = &xyzr[2];
+    input = &radio.inputs.xyzr[2];
   } else if (strcmp(inputStr, "right stick horiz") == 0) {
-    input = &xyzr[3];
+    input = &radio.inputs.xyzr[3];
   }
 }
 
