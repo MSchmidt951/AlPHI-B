@@ -33,12 +33,11 @@ class MotorController {
   public:
     /** Initialises the motors by loading the necessary settings then arming them
      *  
-     *  @param[in] logger Logger object to read the settings from
      *  @param[in] motorName The name of the motor
      *  @param[in] test Whether to test the motors
      *  @returns True if init successful
      */
-    bool init(Logger &logger, const char* motorName, bool test=false);
+    bool init(const char* motorName, bool test=false);
     /** Adds a PID instance to the class. The PID settings are configured in settings.json
      *  
      *  @param[in] name The name of the PID, must be the same as one of the objects in settings.json
@@ -128,8 +127,6 @@ class MotorController {
     ///The number of PID controllers the motor controller has
     int PIDcount = 0;
 
-    ///A reference to the logger
-    Logger* logger;
     ///The name of the motor controller, used for loading settings from settings.json
     const char* name;
 };
@@ -143,12 +140,11 @@ class InputHandler {
   public:
     /** Initialises the motors by loading the necessary settings then arming them
      *  
-     *  @param[in] logger Logger object to read the settings from
      *  @param[in] controller Pointer to the parent motor cotroller
      *  @param[in] parent The name of the parent motor cotroller
      *  @param[in] name The name of the input handler, must be the same as one of the objects in settings.json
      */
-    void init(Logger &l, MotorController* controller, const char* parent, const char* name);
+    void init(MotorController* controller, const char* parent, const char* name);
     /** Processes the input and applies it to the motor controller or one of the PID controllers owned by the motor controller
      *  
      *  @param[in] controller Pointer to the motor cotroller

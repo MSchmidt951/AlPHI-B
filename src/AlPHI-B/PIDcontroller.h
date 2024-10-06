@@ -16,14 +16,13 @@ class PIDcontroller {
   public:
     /** Initialises a PIDcontroller object. Settings are configured in settings.json
      *  
-     *  @param[in] logger Logger object to read the settings from
      *  @param[in] parent Name of the parent object
      *  @param[in] name Name of the PID, must be the same as one of the objects in settings.json
      *  @param[in] targetPtr Pointer to the target value
      *  @param[in] currentPtr Pointer to the current value
      *  @param[in] currentDiffPtr Pointer to the current change in value, if NULL then it is calculated
      */
-    void init(Logger &logger, const char* parent, const char* name, float* targetPtr, float* currentPtr, float* currentDiffPtr);
+    void init(const char* parent, const char* name, float* targetPtr, float* currentPtr, float* currentDiffPtr);
     /** Calculates and applies PID change to a MotorController
      *  
      *  @param[in] controller MotorController object to apply the PID to

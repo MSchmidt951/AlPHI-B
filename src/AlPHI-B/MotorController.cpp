@@ -3,13 +3,12 @@
 #include "HardwareController.h"
 #include "pindef.h"
 
-bool MotorController::init(Logger &l, const char* motorName, bool test) {
-  logger = &l;
+bool MotorController::init(const char* motorName, bool test) {
   name = motorName;
 
-  logger->debug("--- STARTING MOTORCONTROLLER SETUP (" + String(motorName) + ") ---");
+  logger.debug("--- STARTING MOTORCONTROLLER SETUP (" + String(motorName) + ") ---");
   //Load settings from the SD card
-  motorCount = logger->getArraySize(name, "pins");
+  motorCount = logger.getArraySize(name, "pins");
   bool loadSuccess = motorCount != -1;
   if (loadSuccess) {
     motors = new int[motorCount];
@@ -17,27 +16,27 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
     armValues = new float[motorCount];
     defaultValues = new float[motorCount];
 
-    loadSuccess &= logger->loadSetting(name, "pins", motors, motorCount);
+    loadSuccess &= logger.loadSetting(name, "pins", motors, motorCount);
     if (loadSuccess) {
       PINS.convert(motors, motorCount);
     } else {
-      logger->debug("ERROR: could not load pin numbers");
+      logger.debug("ERROR: could not load pin numbers");
     }
-    loadSuccess &= logger->loadSetting(name, "signalFreq", &signalFreq);
+    loadSuccess &= logger.loadSetting(name, "signalFreq", &signalFreq);
     if (signalFreq > 0) {
       float signalLength[2];
-      loadSuccess &= logger->loadSetting(name, "signalLength", signalLength, 2);
+      loadSuccess &= logger.loadSetting(name, "signalLength", signalLength, 2);
       minDutyCycle = 100.0f * signalLength[0] / (1000000.0f/signalFreq);
       maxDutyCycle = 100.0f * signalLength[1] / (1000000.0f/signalFreq);
     }
-    loadSuccess &= logger->loadSetting(name, "armValues", armValues, motorCount);
+    loadSuccess &= logger.loadSetting(name, "armValues", armValues, motorCount);
 
-    loadSuccess &= logger->loadSetting(name, "defaultValues", defaultValues, motorCount);
+    loadSuccess &= logger.loadSetting(name, "defaultValues", defaultValues, motorCount);
   } else {
-    logger->debug("ERROR: motor count cannot be found");
+    logger.debug("ERROR: motor count cannot be found");
   }
   if (!loadSuccess) {
-    logger->debug("ERROR: load unsuccessful");
+    logger.debug("ERROR: load unsuccessful");
     return false;
   }
 
@@ -45,7 +44,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 
   //Arm ESCs
   while (millis() < 2500); //Wait for ESC startup
-  logger->debug("Arming ESCs");
+  logger.debug("Arming ESCs");
   #if PWM_TYPE == TEENSY
     motorSignal = new Teensy_PWM*[motorCount];
   #endif
@@ -65,7 +64,7 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
   }
 
   if (test) {
-    logger->debug("Testing motors");
+    logger.debug("Testing motors");
     hw.setRGB(0, 0, 15);
     delay(5000);
 
@@ -88,18 +87,18 @@ bool MotorController::init(Logger &l, const char* motorName, bool test) {
 }
 
 void MotorController::setupInputs() {
-  logger->debug("Setting up inputs");
-  inputCount = logger->getArraySize(name, "Controls");
+  logger.debug("Setting up inputs");
+  inputCount = logger.getArraySize(name, "Controls");
   inputs = new InputHandler[inputCount];
   for (int i=0; i<inputCount; i++) {
-    inputs[i].init(*logger, this, name, logger->getIndexName(name, "Controls", i));
+    inputs[i].init(this, name, logger.getIndexName(name, "Controls", i));
   }
 }
 
 void MotorController::addPID(const char* PIDName, float* target, float* current, float* currentDiff) {
-  logger->debug("Loading PID " + String(PIDName));
+  logger.debug("Loading PID " + String(PIDName));
   if (PIDcount < MAX_PIDS) {
-    PIDs[PIDcount].init(*logger, name, PIDName, target, current, currentDiff);
+    PIDs[PIDcount].init(name, PIDName, target, current, currentDiff);
     PIDcount++;
   }
 }
@@ -186,7 +185,7 @@ float MotorController::getMotorPower(int index) {
 
 
 
-void InputHandler::init(Logger &logger, MotorController* controller, const char* parent, const char* name) {
+void InputHandler::init(MotorController* controller, const char* parent, const char* name) {
   logger.loadSetting(parent, "Controls", name, "min", &minControl);
   logger.loadSetting(parent, "Controls", name, "max", &maxControl);
   if (!logger.loadSetting(parent, "Controls", name, "mid", &midControl)) {

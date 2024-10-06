@@ -45,10 +45,9 @@ class SensorController {
   public:
     /** Initialise the sensors.
      *  
-     *  @param[in] logger Logger object to read the settings from
      *  @returns Status of sensors. 0 for no error
      */
-    int init(Logger &logger);
+    int init();
     /** Reads the sensors and updates the state of the device */
     void updateAngle();
     /** Add accelerometer and gyroscope data. Called by Sensor objects
@@ -75,10 +74,9 @@ class SensorController {
      *  
      *  @param[in] name The name of the sensor
      *  @param[in] index Index of the sensor
-     *  @param[in] logger Logger object to pass to the sensor
      *  @returns error code. 0 for no error
      */
-    int addSensor(const char* name, int index, Logger &logger);
+    int addSensor(const char* name, int index);
     /** Calculates the current angle (in quaternions) using the accelerometer and gyroscope
      *  
      *  @param[in] accel accelerometer data (Gs)
@@ -116,9 +114,6 @@ class SensorController {
     int sensorCount = 0;
     ///Vector containing all active sensors
     std::vector<std::unique_ptr<Sensor>> sensors;
-
-    ///A reference to the logger
-    Logger* logger;
 };
 
 /**
@@ -129,10 +124,9 @@ class Sensor {
   public:
     /** Initialise the sensor
      *  
-     *  @param[in] logger Logger object to read the settings from
      *  @returns Status of sensors. 0 for no error
      */
-    int init(Logger &logger, const char* name);
+    int init(const char* name);
     /** Gets the value from the sensor and adds it to the SensorController
      *  
      *  @param[in] controller SensorController to add the value to
@@ -144,15 +138,13 @@ class Sensor {
   protected:
     /** Gets the info about the sensor from the SD card
      *  
-     *  @param[in] logger Logger object to read the settings from
      *  @returns If the loading was successful
      */
-    virtual bool getInfo(Logger &logger, const char* name) = 0;
+    virtual bool getInfo(const char* name) = 0;
     /** Initialise the sensor
      *  
-     *  @param[in] logger Logger object used to load settings from
      */
-    virtual int initSensor(Logger &logger, const char* name) = 0;
+    virtual int initSensor(const char* name) = 0;
     ///Weight of the values from the sensor. A weight of 0.5 will affect the total sum of all the sensors half as much as a weight of 1
     float weight;
     ///SPI channel used for the sensor
@@ -168,7 +160,7 @@ class SType_AccelGyro : public Sensor {
   using Sensor::Sensor;
 
   protected:
-    bool getInfo(Logger &logger, const char* name);
+    bool getInfo(const char* name);
     /** Aligns the axes of the sensor with the board */
     void alignAxes();
     ///Sets the order of the axis to align with the board
@@ -200,7 +192,7 @@ class SType_AccelGyro : public Sensor {
     using SType_AccelGyro::SType_AccelGyro;
 
     protected:
-      int initSensor(Logger &logger, const char* name);
+      int initSensor(const char* name);
       void getValue(SensorController &controller);
   
     private:
@@ -220,7 +212,7 @@ class SType_AccelGyro : public Sensor {
     using SType_AccelGyro::SType_AccelGyro;
 
     protected:
-      int initSensor(Logger &logger, const char* name);
+      int initSensor(const char* name);
       void getValue(SensorController &controller);
   
     private:
@@ -238,7 +230,7 @@ class SType_AccelGyro : public Sensor {
     using SType_AccelGyro::SType_AccelGyro;
 
     protected:
-      int initSensor(Logger &logger, const char* name);
+      int initSensor(const char* name);
       void getValue(SensorController &controller);
   
     private:

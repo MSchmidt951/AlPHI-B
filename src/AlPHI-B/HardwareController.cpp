@@ -14,7 +14,7 @@ void HardwareController::initLED() {
   setRGB(RGB_MAX, RGB_MAX/4, 2);
 }
 
-void HardwareController::init(Logger &logger) {
+void HardwareController::init() {
   logger.debug("--- STARTING HARDWARECONTROLLER SETUP ---");
 
   logger.loadSetting("HardwareController", "buzzerPin", &buzzerPin);

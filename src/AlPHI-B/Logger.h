@@ -335,4 +335,6 @@ class Logger {
     ///How many variables are stored per data entry
     uint8_t varCount;
 };
+
+extern Logger logger;
 #endif

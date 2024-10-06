@@ -139,17 +139,17 @@ void setup(){
   #endif
 
   //Set up Hardware Controller
-  hw.init(logger);
+  hw.init();
 
   //Set up sensors
-  int err = sensors.init(logger);
+  int err = sensors.init();
   if (err) {
     logger.logString("Sensor error: " + String(err));
     ABORT();
   }
 
   //Set up motors
-  if (!ESC.init(logger, "4in1_ESC", true)) {
+  if (!ESC.init("4in1_ESC", true)) {
     ABORT();
   }
   ESC.addPID("roll",  0.0f, &sensors.currentAngle[0], &sensors.rRate[0]);

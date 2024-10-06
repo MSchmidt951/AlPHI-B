@@ -6,12 +6,11 @@
   #include "Arduino.h"
 #endif
 
-int SensorController::init(Logger &l) {
-  logger = &l;
-  logger->debug("--- STARTING SENSOR SETUP ---");
+int SensorController::init() {
+  logger.debug("--- STARTING SENSOR SETUP ---");
 
   //Load settings from the SD card
-  logger->loadSetting("Sensors", "angleOffset", angleOffset, 3);
+  logger.loadSetting("Sensors", "angleOffset", angleOffset, 3);
   hw.setRGB(0, RGB_MAX, RGB_MAX);
 
   //Add sensors
@@ -20,14 +19,14 @@ int SensorController::init(Logger &l) {
 
   int sensorTypeCount = sizeof(sensorTypes)/sizeof(const char*);
   for (int i=0; i<sensorTypeCount; i++) {
-    logger->debug("Getting sensor group " + String(sensorTypes[i]));
-    sensorAmount = logger->getArraySize("Sensors", sensorTypes[i]);
+    logger.debug("Getting sensor group " + String(sensorTypes[i]));
+    sensorAmount = logger.getArraySize("Sensors", sensorTypes[i]);
     for (int j=0; j<sensorAmount; j++) {
-      logger->debug("Init " + String(logger->getIndexName("Sensors", sensorTypes[i], j)));
-      err = addSensor(logger->getIndexName("Sensors", sensorTypes[i], j), sensorCount, l);
-      logger->debug(", done", false);
+      logger.debug("Init " + String(logger.getIndexName("Sensors", sensorTypes[i], j)));
+      err = addSensor(logger.getIndexName("Sensors", sensorTypes[i], j), sensorCount);
+      logger.debug(", done", false);
       if (err) {
-        logger->debug("  ERROR: " + String(err), false);
+        logger.debug("  ERROR: " + String(err), false);
         return err;
       }
       sensorCount++;
@@ -35,7 +34,7 @@ int SensorController::init(Logger &l) {
   }
 
   //Take some readings
-  logger->debug("Taking some readings");
+  logger.debug("Taking some readings");
   int readings = 1000;
   for (int i=0; i<readings; i++) {
     getSensorData();
@@ -117,7 +116,7 @@ void SensorController::addAccelGyro(float* accel, float* gyro, float weight) {
   accelGyroWeight += weight;
 }
 
-int SensorController::addSensor(const char* name, int index, Logger &logger) {
+int SensorController::addSensor(const char* name, int index) {
   bool addedSensor = false;
   if (strcmp(name, "NO_ACCELGYRO") == 0) {
     #ifdef NO_ACCELGYRO
@@ -154,7 +153,7 @@ int SensorController::addSensor(const char* name, int index, Logger &logger) {
   }
 
   if (addedSensor) {
-    return sensors[index]->init(logger, name);
+    return sensors[index]->init(name);
   } else {
     return (index+1) * -101;
   }
@@ -272,20 +271,20 @@ void SensorController::eulerToQuat(float roll, float pitch, float yaw) {
 }
 
 
-int Sensor::init(Logger &logger, const char* name) {
+int Sensor::init(const char* name) {
   weight = 1;
 
   logger.debug(", getting info", false);
-  if (getInfo(logger, name)) {
+  if (getInfo(name)) {
     logger.debug(", init start", false);
-    return initSensor(logger, name);
+    return initSensor(name);
   } else {
     return -999;
   }
 }
 
 
-bool SType_AccelGyro::getInfo(Logger &logger, const char* name) {
+bool SType_AccelGyro::getInfo(const char* name) {
   bool loadSuccess = true;
 
   int enabledInt;
@@ -315,7 +314,7 @@ void SType_AccelGyro::alignAxes() {
 }
 
 #ifdef SENSOR_ICM42688
-  int S_ICM42688::initSensor(Logger &logger, const char* name) {
+  int S_ICM42688::initSensor(const char* name) {
     ICM42688 = new DFRobot_ICM42688_SPI(CSpin, SPIs[SPIchannel]);
     int err = ICM42688->begin();
 
@@ -358,7 +357,7 @@ void SType_AccelGyro::alignAxes() {
   }
 #endif
 #ifdef SENSOR_LSM6DSOX
-  int S_LSM6DSOX::initSensor(Logger &logger, const char* name) {
+  int S_LSM6DSOX::initSensor(const char* name) {
     if (lsm.init(SPIs[SPIchannel], CSpin)) {
       return 0;
     } else {
@@ -377,7 +376,7 @@ void SType_AccelGyro::alignAxes() {
   }
 #endif
 #ifdef SENSOR_MPU6050
-  int S_MPU6050::initSensor(Logger &logger, const char* name) {
+  int S_MPU6050::initSensor(const char* name) {
     Wire.begin();
     Wire.setClock(400000);
     

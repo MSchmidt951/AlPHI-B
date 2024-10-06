@@ -48,11 +48,8 @@ class HardwareController {
   public:
     /** Initialise the RGB LED, should be the first thing done in setup() */
     void initLED();
-    /** Initialises the hardware and loads settings
-     *  
-     *  @param[in] logger Logger object to read the settings from
-     */
-    void init(Logger &logger);
+    /** Initialises the hardware and loads settings */
+    void init();
     /** Sets the red, green and blue channels of the RGB LED
      *  
      *  @param[in] r Amount of red, 0-255
