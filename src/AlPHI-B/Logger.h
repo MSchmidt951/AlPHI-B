@@ -79,6 +79,11 @@ class Logger {
     void debug(String s, bool timestamp=true);
     /** Closes the debug file */
     void closeDebug();
+    /** Log an error into the debug file
+     *
+     *  @param[in] msg Error message to log
+     */
+    void error(String msg);
     /** Log setting (integer) to the current flight log
      *  
      *  @param[in] name Name of the setting

@@ -47,6 +47,18 @@ void HardwareController::init(Logger &logger) {
       logger.loadSetting("HardwareController", "Inputs", analogInputs[i].name, "offset", &analogInputs[i].offset);
     }
   }
+
+  headerCount = logger.getArraySize("HardwareController", "Headers");
+  if (headerCount) {
+      headerPinCount = new int[headerCount];
+      headerNames = new const char*[headerCount];
+      for (int i=0; i<headerCount; i++) {
+          headerNames[i] = logger.getIndexName("HardwareController", "Headers", i);
+          headerPinCount[i] = logger.getArraySize("HardwareController", "Headers", headerNames[i], "pins");
+          logger.loadSetting("HardwareController", "Headers", headerNames[i], "pins", headerPinNumbers[i], -1);
+      }
+  }
+
   setRGB(RGB_MAX, RGB_MAX, 0);
 }
 
@@ -83,4 +95,58 @@ int HardwareController::CSpin(int SPInum, int index) {
   }
 
   return -1;
+}
+
+AnalogInput* HardwareController::analogInput(const char* name) {
+    for (int i=0; i<analogInputCount; i++) {
+        if (strcmp(name, analogInputs[i].name) == 0) {
+            return &analogInputs[i];
+        }
+    }
+    return NULL;
+}
+
+float HardwareController::analogValue(const char* name) {
+    AnalogInput* i = analogInput(name);
+    if (i == NULL) {
+        logger.error("Analog input not found: " + String(name));
+        return 0;
+    }
+    return i->getValue();
+}
+
+int HardwareController::getHeaderIndex(const char* name) {
+    for (int i=0; i<headerCount; i++) {
+        if (strcmp(headerNames[i], name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int HardwareController::headerLen(const char* name) {
+    int index = getHeaderIndex(name);
+    if (index == -1) {
+        return -1;
+    }
+
+    return headerPinCount[index];
+}
+
+int* HardwareController::headerPins(const char* name) {
+    int index = getHeaderIndex(name);
+    if (index == -1) {
+        return NULL;
+    }
+
+    return headerPinNumbers[index];
+}
+
+int HardwareController::headerPin(const char* name, int index) {
+    int* header = headerPins(name);
+    if (header == NULL) {
+        return -1;
+    }
+
+    return header[index];
 }

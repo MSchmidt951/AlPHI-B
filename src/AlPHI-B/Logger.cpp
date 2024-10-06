@@ -86,6 +86,11 @@ void Logger::closeDebug() {
   #endif
 }
 
+void Logger::error(String msg) {
+    debug("ERROR: " + msg, true);
+    closeDebug();
+}
+
 void Logger::logSetting(String name, int data, bool seperator) {
   if (seperator) {
     logString(",");
