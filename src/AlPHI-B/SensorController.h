@@ -5,7 +5,7 @@
 //#define NO_ACCELGYRO
 #define SENSOR_ICM42688
 #define SENSOR_LSM6DSOX
-#define SENSOR_MPU6050
+//#define SENSOR_MPU6050
 
 //#define SENSOR_ICP20100
 
@@ -58,6 +58,14 @@ class SensorController {
      */
     void addAccelGyro(float* accel, float* gyro, float weight);
 
+    /** Gets the proper alignment and order of axes for the accelerometer
+     *  
+     *  @param[in] sensorIndex which sensor to test
+     */
+    void testAxesAlignment(int sensorIndex);
+    /** Tests that the sensor fusion algorithm works with a specified sensor */
+    void testSensorFusion();
+
     ///IMU angle offset {roll, pitch and yaw}. Can be set via SD card
     float angleOffset[3] = {0, 0, 0};
     ///Current angle of roll, pitch and yaw (in degrees)
@@ -68,8 +76,6 @@ class SensorController {
   private:
     /** Retrieves and stores data from all sensors */
     void getSensorData();
-    /** Resets stored sensor data for the next time getSensorData() is called*/
-    void resetSensorData();
     /** Add and init a sensor
      *  
      *  @param[in] name The name of the sensor
@@ -81,25 +87,26 @@ class SensorController {
      *  
      *  @param[in] accel accelerometer data (Gs)
      *  @param[in] gyro gyroscope data (degrees/second)
+     *  @param[out] q quaternion value to uptate
+     *  @param[in] customTime sets a custom loop time, useful for debugging
      */
-    void MadgwickQuaternionUpdate(float *accel, float *gyro);
-    /** Converts roll, pitch and yaw to quaternions
+    void MadgwickQuaternionUpdate(float *accel, float *gyro, float *q, float customTime=-1.0f);
+    /** Converts quaternions to euler angles
      *  
-     *  @param[in] roll Roll value
-     *  @param[in] pitch Pitch value
-     *  @param[in] yaw Yaw value
+     *  @param[in] q array of quaternion values
+     *  @param[out] euler 3 axis array to put the euler values in
      */
-    void eulerToQuat(float roll, float pitch, float yaw);
+    void quatToEuler(float *q, float *euler);
     ///Beta parameter for MadgwickQuaternionUpdate calculations
-    const float madgwick_beta = sqrt(.05) * PI * (5.0 / 180.0);
+    float madgwick_beta = 0.02f;
     ///Zeta parameter for MadgwickQuaternionUpdate calculations
-    const float madgwick_zeta = sqrt(.75) * PI * (2.0 / 180.0);
+    float madgwick_zeta = 0.03f;
     ///Quaternion container for the current angle
     float q[4] = {1, 0, 0, 0};
 
-    ///Accelerometer value in Gs
+    ///Accelerometer value in Gs {fwd/back, left/right, up/down}
     float accelVal[3];
-    ///Gyroscope value in degrees per seconds
+    ///Gyroscope value in degrees per seconds {roll, pitch, yaw}
     float gyroVal[3];
     ///The sum of all the weightings from each induvidual accelerometer+gyroscope sensor
     float accelGyroWeight = 0;
@@ -124,6 +131,7 @@ class Sensor {
   public:
     /** Initialise the sensor
      *  
+     *  @param[in] name The name of the sensor
      *  @returns Status of sensors. 0 for no error
      */
     int init(const char* name);
@@ -138,11 +146,14 @@ class Sensor {
   protected:
     /** Gets the info about the sensor from the SD card
      *  
+     *  @param[in] name The name of the sensor
      *  @returns If the loading was successful
      */
     virtual bool getInfo(const char* name) = 0;
     /** Initialise the sensor
      *  
+     *  @param[in] name The name of the sensor
+     *  @returns Status of sensors. 0 for no error
      */
     virtual int initSensor(const char* name) = 0;
     ///Weight of the values from the sensor. A weight of 0.5 will affect the total sum of all the sensors half as much as a weight of 1
@@ -165,9 +176,9 @@ class SType_AccelGyro : public Sensor {
     void alignAxes();
     ///Sets the order of the axis to align with the board
     int axisOrder[3];
-    ///Sets  direction each accelerometer axis
+    ///Sets direction each accelerometer axis
     int accelDir[3];
-    ///Sets  direction each gyroscope axis
+    ///Sets direction each gyroscope axis
     int gyroDir[3];
     ///Resolution of the accelerometer
     float aRes;

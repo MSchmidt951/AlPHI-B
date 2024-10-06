@@ -1,5 +1,6 @@
 #include "SensorController.h"
 #include "HardwareController.h"
+#include "Radio.h"
 #include "pindef.h"
 
 #ifdef NO_ACCELGYRO
@@ -16,14 +17,29 @@ int SensorController::init() {
   //Add sensors
   int sensorAmount;
   int err;
-
   int sensorTypeCount = sizeof(sensorTypes)/sizeof(const char*);
+  int CSpin;
+  const char* name;
+
+  logger.debug("Setting SPI CS pins");
+  for (int i=0; i<sensorTypeCount; i++) {
+    sensorAmount = logger.getArraySize("Sensors", sensorTypes[i]);
+    for (int j=0; j<sensorAmount; j++) {
+      name = logger.getIndexName("Sensors", sensorTypes[i], j);
+      if (logger.loadSetting("Sensors", "accelGyro", name, "CS", &CSpin)) {
+        CSpin = PINS[CSpin];
+        pinMode(CSpin, OUTPUT);
+        digitalWrite(CSpin, HIGH);
+      }
+    }
+  }
   for (int i=0; i<sensorTypeCount; i++) {
     logger.debug("Getting sensor group " + String(sensorTypes[i]));
     sensorAmount = logger.getArraySize("Sensors", sensorTypes[i]);
     for (int j=0; j<sensorAmount; j++) {
-      logger.debug("Init " + String(logger.getIndexName("Sensors", sensorTypes[i], j)));
-      err = addSensor(logger.getIndexName("Sensors", sensorTypes[i], j), sensorCount);
+      name = logger.getIndexName("Sensors", sensorTypes[i], j);
+      logger.debug("Init " + String(name));
+      err = addSensor(name, sensorCount, l);
       logger.debug(", done", false);
       if (err) {
         logger.debug("  ERROR: " + String(err), false);
@@ -35,24 +51,33 @@ int SensorController::init() {
 
   //Take some readings
   logger.debug("Taking some readings");
-  int readings = 1000;
+  int readings = 50;
+  float tmpAccelVal[3] = {0, 0, 0};
+  float tmpBeta = madgwick_beta;
+  madgwick_beta = 0.6;
   for (int i=0; i<readings; i++) {
     getSensorData();
 
-    //Calculate the angle from the accelerometer
-    currentAngle[0] += atan2(accelVal[1], accelVal[2]);
-    currentAngle[1] += atan(-accelVal[0] / sqrt(accelVal[1]*accelVal[1] + accelVal[2]*accelVal[2]));
+    for (int j=0; j<3; j++) {
+      tmpAccelVal[j] += accelVal[j];
+    }
 
-    //Reset values for next loop
-    resetSensorData();
-
-    delayMicroseconds(10);
+    delayMicroseconds(400);
   }
   //Get the average from the readings
-  currentAngle[0] /= float(readings);
-  currentAngle[1] /= float(readings);
-  //Set the quaternion to the current angle
-  eulerToQuat(currentAngle[0], currentAngle[1], PI);
+  for (int i=0; i<3; i++) {
+    tmpAccelVal[i] /= float(readings);
+    gyroVal[i] = 0;
+  }
+  //Get the current angle to settle then calculate it
+  for (int i=0; i<10000; i++) {
+    MadgwickQuaternionUpdate(tmpAccelVal, gyroVal, q, 0.5);
+  }
+  quatToEuler(q, currentAngle);
+  for (int i=0; i<2; i++) {
+    currentAngle[i] = fmod(currentAngle[i]+angleOffset[i]+180.0f, 360.0f) - 180.0f;
+  }
+  madgwick_beta = tmpBeta;
 
   hw.setRGB(0, 0, 0);
   return 0;
@@ -62,14 +87,11 @@ void SensorController::updateAngle() {
   getSensorData();
 
   //Update quaternion values
-  MadgwickQuaternionUpdate(accelVal, gyroVal);
+  MadgwickQuaternionUpdate(accelVal, gyroVal, q);
   //Convert quaternion to roll, pitch and yaw
-  currentAngle[0] = -atan2(2 * (q[0]*q[1] + q[2]*q[3]), q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3]);
-  currentAngle[1] = -asin(2 * (q[1]*q[3] - q[0]*q[2]));
-  currentAngle[2] = atan2(2 * (q[1]*q[2] + q[0]*q[3]), q[0]*q[0] + q[1]*q[1] - q[2]*q[2] - q[3]*q[3]);
-  //Convert from radians to degrees then add offset
+  quatToEuler(q, currentAngle);
+  //Add offset
   for (int i=0; i<3; i++) {
-    currentAngle[i] *= 180 / PI;
     currentAngle[i] = fmod(currentAngle[i]+angleOffset[i]+180.0f, 360.0f) - 180.0f;
   }
 
@@ -81,12 +103,17 @@ void SensorController::updateAngle() {
   for (int i=0; i<3; i++) {
     rRate[i] = gyroVal[i];
   }
-
-  //Reset values for next loop
-  resetSensorData();
 }
 
 void SensorController::getSensorData() {
+  //Reset the sensor data from the last loop
+  accelGyroWeight = 0;
+  for (int i=0; i<3; i++) {
+    accelVal[i] = 0;
+    gyroVal[i] = 0;
+  }
+
+  //Get the sensor data
   for (int i=0; i<sensorCount; i++) {
     if (sensors[i]->enabled) {
       sensors[i]->getValue(*this);
@@ -97,14 +124,6 @@ void SensorController::getSensorData() {
   for (int i=0; i<3; i++) {
     accelVal[i] /= accelGyroWeight;
     gyroVal[i] /= accelGyroWeight;
-  }
-}
-
-void SensorController::resetSensorData() {
-  accelGyroWeight = 0;
-  for (int i=0; i<3; i++) {
-    accelVal[i] = 0;
-    gyroVal[i] = 0;
   }
 }
 
@@ -159,9 +178,16 @@ int SensorController::addSensor(const char* name, int index) {
   }
 }
 
-//Kris Winer's implementation of Sebastian Madgwick's "...efficient orientation filter for... inertial/magnetic sensor arrays"
-//I have changd the inputs to work with my program
-void SensorController::MadgwickQuaternionUpdate(float *accel, float *gyro) {
+//An adapted version of Kris Winer's implementation of Sebastian Madgwick's "...efficient orientation filter for... inertial/magnetic sensor arrays"
+void SensorController::MadgwickQuaternionUpdate(float *accel, float *gyro, float *q, float customTime) {
+  //Get the time since last calculation in microseconds
+  float t;
+  if (customTime <= 0) {
+    t = loopTime()/1000.0f;
+  } else {
+    t = customTime/1000.0f;
+  }
+
   //Convert inputs
   float ax = accel[0];
   float ay = accel[1];
@@ -170,7 +196,6 @@ void SensorController::MadgwickQuaternionUpdate(float *accel, float *gyro) {
   float gyroy = gyro[1] * PI / 180.0f;
   float gyroz = gyro[2] * PI / 180.0f;
 
-  float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];         //short name local variable for readability
   float norm;                                               //vector norm
   float f1, f2, f3;                                         //objetive funcyion elements
   float J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33; //objective function Jacobian elements
@@ -179,16 +204,14 @@ void SensorController::MadgwickQuaternionUpdate(float *accel, float *gyro) {
   float gerrx, gerry, gerrz, gbiasx, gbiasy, gbiasz;        //gyro bias error
 
   //Auxiliary variables to avoid repeated arithmetic
-  float _halfq1 = 0.5f * q1;
-  float _halfq2 = 0.5f * q2;
-  float _halfq3 = 0.5f * q3;
-  float _halfq4 = 0.5f * q4;
-  float _2q1 = 2.0f * q1;
-  float _2q2 = 2.0f * q2;
-  float _2q3 = 2.0f * q3;
-  float _2q4 = 2.0f * q4;
-  //float _2q1q3 = 2.0f * q1 * q3;
-  //float _2q3q4 = 2.0f * q3 * q4;
+  float _halfq1 = 0.5f * q[0];
+  float _halfq2 = 0.5f * q[1];
+  float _halfq3 = 0.5f * q[2];
+  float _halfq4 = 0.5f * q[3];
+  float _2q1 = 2.0f * q[0];
+  float _2q2 = 2.0f * q[1];
+  float _2q3 = 2.0f * q[2];
+  float _2q4 = 2.0f * q[3];
 
   //Normalise accelerometer measurement
   norm = sqrt(ax * ax + ay * ay + az * az);
@@ -199,9 +222,9 @@ void SensorController::MadgwickQuaternionUpdate(float *accel, float *gyro) {
   az *= norm;
 
   //Compute the objective function and Jacobian
-  f1 = _2q2 * q4 - _2q1 * q3 - ax;
-  f2 = _2q1 * q2 + _2q3 * q4 - ay;
-  f3 = 1.0f - _2q2 * q2 - _2q3 * q3 - az;
+  f1 = _2q2 * q[3] - _2q1 * q[2] - ax;
+  f2 = _2q1 * q[1] + _2q3 * q[3] - ay;
+  f3 = 1.0f - _2q2 * q[1] - _2q3 * q[2] - az;
   J_11or24 = _2q3;
   J_12or23 = _2q4;
   J_13or22 = _2q1;
@@ -228,9 +251,9 @@ void SensorController::MadgwickQuaternionUpdate(float *accel, float *gyro) {
   gerrz = _2q1 * hatDot4 - _2q2 * hatDot3 + _2q3 * hatDot2 - _2q4 * hatDot1;
 
   //Compute and remove gyroscope biases
-  gbiasx += gerrx * loopTime()/1000 * madgwick_zeta;
-  gbiasy += gerry * loopTime()/1000 * madgwick_zeta;
-  gbiasz += gerrz * loopTime()/1000 * madgwick_zeta;
+  gbiasx += gerrx * t * madgwick_zeta;
+  gbiasy += gerry * t * madgwick_zeta;
+  gbiasz += gerrz * t * madgwick_zeta;
   gyrox -= gbiasx;
   gyroy -= gbiasy;
   gyroz -= gbiasz;
@@ -242,34 +265,189 @@ void SensorController::MadgwickQuaternionUpdate(float *accel, float *gyro) {
   qDot4 =  _halfq1 * gyroz + _halfq2 * gyroy - _halfq3 * gyrox;
 
   //Compute then integrate estimated quaternion derivative
-  q1 += (qDot1 -(madgwick_beta * hatDot1)) * loopTime()/1000;
-  q2 += (qDot2 -(madgwick_beta * hatDot2)) * loopTime()/1000;
-  q3 += (qDot3 -(madgwick_beta * hatDot3)) * loopTime()/1000;
-  q4 += (qDot4 -(madgwick_beta * hatDot4)) * loopTime()/1000;
+  q[0] += (qDot1 -(madgwick_beta * hatDot1)) * t;
+  q[1] += (qDot2 -(madgwick_beta * hatDot2)) * t;
+  q[2] += (qDot3 -(madgwick_beta * hatDot3)) * t;
+  q[3] += (qDot4 -(madgwick_beta * hatDot4)) * t;
 
   //Normalize the quaternion
-  norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);    //normalise quaternion
+  norm = sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]);
   norm = 1.0f/norm;
-  q[0] = q1 * norm;
-  q[1] = q2 * norm;
-  q[2] = q3 * norm;
-  q[3] = q4 * norm;
-}
-
-void SensorController::eulerToQuat(float roll, float pitch, float yaw) {
-  q[0] = (sin(yaw/2) * cos(-pitch/2) * cos(roll/2)) - (cos(yaw/2) * sin(-pitch/2) * sin(roll/2));
-  q[1] = (cos(yaw/2) * sin(-pitch/2) * cos(roll/2)) + (sin(yaw/2) * cos(-pitch/2) * sin(roll/2));
-  q[2] = (cos(yaw/2) * cos(-pitch/2) * sin(roll/2)) - (sin(yaw/2) * sin(-pitch/2) * cos(roll/2));
-  q[3] = (cos(yaw/2) * cos(-pitch/2) * cos(roll/2)) + (sin(yaw/2) * sin(-pitch/2) * sin(roll/2));
-
-  //Normalise quaternion
-  float norm = 1.0f/sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]);
   q[0] *= norm;
   q[1] *= norm;
   q[2] *= norm;
   q[3] *= norm;
 }
 
+void SensorController::quatToEuler(float *q, float *euler) {
+  euler[0] = -atan2(2 * (q[0]*q[1] + q[2]*q[3]), q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3]);
+  euler[1] = -asin(2 * (q[1]*q[3] - q[0]*q[2]));
+  euler[2] = atan2(2 * (q[1]*q[2] + q[0]*q[3]), q[0]*q[0] + q[1]*q[1] - q[2]*q[2] - q[3]*q[3]);
+
+  //Convert from radians to degrees
+  for (int i=0; i<3; i++) {
+    euler[i] *= 180 / PI;
+  }
+}
+
+void SensorController::testAxesAlignment(int sensorIndex) {
+  logger.closeDebug();
+  logger.debug("Testing axes alignment");
+
+  madgwick_beta = 0.6;
+  madgwick_zeta = 0.03;
+
+  int orders[][3] = {
+    {0, 1, 2},
+    {0, 2, 1},
+    {1, 0, 2},
+    {1, 2, 0},
+    {2, 0, 1},
+    {2, 1, 0}
+  };
+  int directions[][3] = {
+    { 1,  1,  1},
+    { 1, -1,  1},
+    { 1,  1, -1},
+    { 1, -1, -1},
+    {-1,  1,  1},
+    {-1, -1,  1},
+    {-1,  1, -1},
+    {-1, -1, -1}
+  };
+  float accelValAvg[3];
+  float testAccelVal[3];
+
+  //Setup sensor
+  for (int i=0; i<sensorCount; i++) {
+    if (i == sensorIndex) {
+      sensors[i]->enabled = true;
+      sensors[i]->getValue(*this);
+    } else {
+      sensors[i]->enabled = false;
+    }
+  }
+  bool buttonPressed;
+  for (int i=0; i<4; i++) {
+    //Wait until button is pressed
+    buttonPressed = false;
+    while (!buttonPressed) {
+      delay(1);
+      radio.getInput();
+      if (radio.inputs.dirBtn[i]) {
+        buttonPressed = true;
+      }
+    }
+
+    //Get data from the accelerometer
+    for (int x=0; x<3; x++) {
+      accelValAvg[x] = 0.0f;
+    }
+    for (int x=0; x<10; x++) {
+      getSensorData();
+      for (int y=0; y<3; y++) {
+        accelValAvg[y] += accelVal[y];
+      }
+      delayMicroseconds(500);
+    }
+    for (int x=0; x<3; x++) {
+      accelValAvg[x] /= 10.0f;
+      gyroVal[x] = 0;
+    }
+
+    //Output stuff
+    for (int o=0; o<6; o++) {
+      for (int d=0; d<8; d++) {
+        for (int g=0; g<3; g++) {
+          //Set axes order and direction
+          for (int x=0; x<3; x++) {
+            testAccelVal[x] = accelValAvg[orders[o][x]] * directions[d][x];
+          }
+          //Calculate current angle
+          for (int x=0; x<25000; x++) {
+            MadgwickQuaternionUpdate(testAccelVal, gyroVal, q, 0.5);
+          }
+          quatToEuler(q, currentAngle);
+           //Log the data
+          logger.debug("o"+String(o)+" dA"+String(d)+" dG"+String(g)
+              +"\t angle: "+String(currentAngle[0])+" "+String(currentAngle[1])+" "+String(currentAngle[2])
+              +"\t testAccelVal: "+String(testAccelVal[0])+" "+String(testAccelVal[1])+" "+String(testAccelVal[2]));
+        }
+      }
+      logger.debug("");
+    }
+    logger.closeDebug();
+  }
+
+  logger.closeDebug();
+}
+
+void SensorController::testSensorFusion() {
+  logger.closeDebug();
+  logger.debug("Testing sensor fusion");
+
+  madgwick_beta = 0.6;
+  madgwick_zeta = 0.03;
+
+  float accelAngle[3];
+
+  //Test with gyro data
+  accelVal[0] = 0;
+  accelVal[1] = 0;
+  accelVal[2] = 1;
+  for (int i=0; i<3; i++) {
+    gyroVal[i] = 0;
+  }
+  for (int i=0; i<6; i++) {
+    for (int j=0; j<10000; j++) {
+      MadgwickQuaternionUpdate(accelVal, gyroVal, q, 0.5);
+    }
+    quatToEuler(q, currentAngle);
+    logger.debug("accel test: 0 0 1\t " +String(currentAngle[0])+" " +String(currentAngle[1])+" " +String(currentAngle[2]));
+    if (i==3){madgwick_beta = 0.04;}
+  }
+  gyroVal[0] = 0.2;
+  gyroVal[1] = 0;
+  gyroVal[2] = 0;
+  for (int i=0; i<50; i++) {
+    for (int j=0; j<500; j++) {
+      MadgwickQuaternionUpdate(accelVal, gyroVal, q, 0.5);
+    }
+    quatToEuler(q, currentAngle);
+    logger.debug("gyro test: .1 0 0\t " +String(currentAngle[0])+" " +String(currentAngle[1])+" " +String(currentAngle[2]));
+    gyroVal[0] += 0.3;
+  }
+  gyroVal[0] = 0;
+  logger.debug("");
+
+  //Test with accelerometer data
+  madgwick_beta = 0.4;
+  for (int i=0; i<5; i++) {
+    for (int j=0; j<5000; j++) {
+      MadgwickQuaternionUpdate(accelVal, gyroVal, q, 0.5);
+    }
+    quatToEuler(q, currentAngle);
+    accelAngle[0] = atan(-accelVal[0] / sqrt(accelVal[1]*accelVal[1] + accelVal[2]*accelVal[2])) * 180 / PI;
+    accelAngle[1] = atan(-accelVal[1] / sqrt(accelVal[0]*accelVal[0] + accelVal[2]*accelVal[2])) * 180 / PI;
+    accelAngle[2] = atan2(accelVal[1], accelVal[2]);
+    logger.debug("accel test: 0 0 1\t " +String(currentAngle[0])+" " +String(currentAngle[1])+" " +String(currentAngle[2])+ "\t trig " +String(accelAngle[0])+" " +String(accelAngle[1])+" " +String(accelAngle[2]));
+  }
+  accelVal[0] = 0;
+  accelVal[1] = 0.707;
+  accelVal[2] = 0.707;
+  for (int i=0; i<10; i++) {
+    for (int x=0; x<5000; x++) {
+      MadgwickQuaternionUpdate(accelVal, gyroVal, q, 0.5);
+    }
+    quatToEuler(q, currentAngle);
+    accelAngle[0] = atan(-accelVal[0] / sqrt(accelVal[1]*accelVal[1] + accelVal[2]*accelVal[2])) * 180 / PI;
+    accelAngle[1] = atan(-accelVal[1] / sqrt(accelVal[0]*accelVal[0] + accelVal[2]*accelVal[2])) * 180 / PI;
+    accelAngle[2] = atan2(accelVal[0], accelVal[2]);
+    logger.debug("accel test: 0 .7 .7\t " +String(currentAngle[0])+" " +String(currentAngle[1])+" " +String(currentAngle[2])+ "\t trig " +String(accelAngle[0])+" " +String(accelAngle[1])+" " +String(accelAngle[2]));
+  }
+
+  logger.closeDebug();
+}
 
 int Sensor::init(const char* name) {
   weight = 1;
