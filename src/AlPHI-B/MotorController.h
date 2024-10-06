@@ -126,6 +126,8 @@ class MotorController {
     InputHandler* inputs;
     ///The number of PID controllers the motor controller has
     int PIDcount = 0;
+    ///Percentage compensation per voltage drop
+    float battComp = 0;
 
     ///The name of the motor controller, used for loading settings from settings.json
     const char* name;

@@ -59,6 +59,8 @@ void HardwareController::init() {
       }
   }
 
+  logger.loadSetting("Battery", "MaxVoltage", &maxBattVolt);
+
   setRGB(RGB_MAX, RGB_MAX, 0);
 }
 
@@ -149,4 +151,8 @@ int HardwareController::headerPin(const char* name, int index) {
     }
 
     return header[index];
+}
+
+float HardwareController::getMaxBatt() {
+    return maxBattVolt;
 }

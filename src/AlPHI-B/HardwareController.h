@@ -110,6 +110,8 @@ class HardwareController {
      *  @returns pin number
      */
     int headerPin(const char* name, int index);
+    /** Gets the maximum battery voltage */
+    float getMaxBatt();
 
   private:
     /** Returns the index of a header
@@ -155,6 +157,8 @@ class HardwareController {
     int** headerPinNumbers;
     ///Pin header names
     const char** headerNames;
+    ///Maximum battery voltage
+    float maxBattVolt;
 };
 
 extern HardwareController hw;

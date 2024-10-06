@@ -32,6 +32,10 @@ bool MotorController::init(const char* motorName, bool test) {
     loadSuccess &= logger.loadSetting(name, "armValues", armValues, motorCount);
 
     loadSuccess &= logger.loadSetting(name, "defaultValues", defaultValues, motorCount);
+
+    if (!logger.loadSetting(name, "batteryCompensation", &battComp)) {
+        battComp = 0;
+    }
   } else {
     logger.debug("ERROR: motor count cannot be found");
   }
@@ -127,6 +131,13 @@ void MotorController::write() {
   for (int i=0; i<PIDcount; i++) {
     PIDs[i].calc(this);
   }
+  //Battery voltage compensation
+  float battVolt = hw.analogValue("battVolt");
+  float comp = (hw.getMaxBatt() - battVolt) * battComp;
+  for (int i=0; i<motorCount; i++) {
+      motorPower[i] += comp;
+  }
+
 
   //Apply output to motor
   for (int i=0; i<motorCount; i++) {
